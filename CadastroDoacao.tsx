@@ -1,5 +1,7 @@
+// CadastroDoacao.tsx
 import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function CadastroDoacao() {
   const [tipoItem, setTipoItem] = useState('');
@@ -29,52 +31,61 @@ export default function CadastroDoacao() {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.titulo}>Cadastro de Doação</Text>
+    <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+          <Text style={styles.titulo}>Cadastro de Doação</Text>
 
-      <View style={styles.campo}>
-        <Text style={styles.label}>Tipo do item</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Ex: Roupas, alimentos, brinquedos"
-          value={tipoItem}
-          onChangeText={setTipoItem}
-        />
-      </View>
+          <View style={styles.campo}>
+            <Text style={styles.label}>Tipo do item</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Ex: Roupas, alimentos, brinquedos"
+              value={tipoItem}
+              onChangeText={setTipoItem}
+            />
+          </View>
 
-      <View style={styles.campo}>
-        <Text style={styles.label}>Quantidade</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Ex: 5"
-          keyboardType="numeric"
-          value={quantidade}
-          onChangeText={validarQuantidade}
-        />
-        {erroQuantidade !== '' && (
-          <Text style={styles.erro}>{erroQuantidade}</Text>
-        )}
-      </View>
+          <View style={styles.campo}>
+            <Text style={styles.label}>Quantidade</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Ex: 5"
+              keyboardType="numeric"
+              value={quantidade}
+              onChangeText={validarQuantidade}
+            />
+            {erroQuantidade !== '' && (
+              <Text style={styles.erro}>{erroQuantidade}</Text>
+            )}
+          </View>
 
-      <View style={styles.campo}>
-        <Text style={styles.label}>Ponto de destino</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Ex: Ponto de Coleta Centro"
-          value={pontoDestino}
-          onChangeText={setPontoDestino}
-        />
-      </View>
+          <View style={styles.campo}>
+            <Text style={styles.label}>Ponto de destino</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Ex: Ponto de Coleta Centro"
+              value={pontoDestino}
+              onChangeText={setPontoDestino}
+            />
+          </View>
 
-      <TouchableOpacity style={styles.botao} onPress={handleCadastrar}>
-        <Text style={styles.textoBotao}>Cadastrar Doação</Text>
-      </TouchableOpacity>
-    </View>
+          <TouchableOpacity style={styles.botao} onPress={handleCadastrar}>
+            <Text style={styles.textoBotao}>Cadastrar Doação</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff', padding: 24 },
+  container: { flex: 1, backgroundColor: '#fff' },
+  flex: { flex: 1 },
+  scrollContent: { padding: 24, flexGrow: 1 },
   titulo: { fontSize: 22, fontWeight: 'bold', marginBottom: 24, textAlign: 'center', color: '#1B3A5C' },
   campo: { marginBottom: 16 },
   label: { fontSize: 14, fontWeight: '600', marginBottom: 6 },
@@ -92,7 +103,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingVertical: 14,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 8,
+    minHeight: 44,
   },
   textoBotao: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
 });

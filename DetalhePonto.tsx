@@ -1,4 +1,6 @@
-import { View, Text, StyleSheet } from 'react-native';
+// DetalhePonto.tsx
+import { ScrollView, Text, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from './App';
 import { pontosMock, Ponto } from './ListaPontos';
@@ -7,12 +9,14 @@ type Props = NativeStackScreenProps<RootStackParamList, 'DetalhePonto'>;
 
 function PontoDetalhe({ ponto }: { ponto: Ponto }) {
   return (
-    <View style={styles.container}>
-      <Text style={styles.nome}>{ponto.nome}</Text>
-      <Text style={styles.campo}>Endereço: {ponto.endereco}</Text>
-      <Text style={styles.campo}>Horário: {ponto.horario}</Text>
-      <Text style={styles.campo}>{ponto.recebeOuDistribui}</Text>
-    </View>
+    <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <Text style={styles.nome}>{ponto.nome}</Text>
+        <Text style={styles.campo}>Endereço: {ponto.endereco}</Text>
+        <Text style={styles.campo}>Horário: {ponto.horario}</Text>
+        <Text style={styles.campo}>{ponto.recebeOuDistribui}</Text>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -28,7 +32,8 @@ function DetalhePonto({ route }: Props) {
 export default DetalhePonto;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20 },
+  container: { flex: 1 },
+  scrollContent: { padding: 20 },
   nome: { fontSize: 22, fontWeight: 'bold', color: '#1B3A5C', marginBottom: 12 },
   campo: { fontSize: 16, marginTop: 6, color: '#333333' },
 });
