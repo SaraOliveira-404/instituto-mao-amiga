@@ -1,13 +1,48 @@
 // CadastroDoacao.tsx
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const STORAGE_KEY = '@mao_amiga:doacoes';
+
+type Doacao = {
+  id: string;
+  tipoItem: string;
+  quantidade: string;
+  pontoDestino: string;
+};
 
 export default function CadastroDoacao() {
   const [tipoItem, setTipoItem] = useState('');
   const [quantidade, setQuantidade] = useState('');
   const [pontoDestino, setPontoDestino] = useState('');
   const [erroQuantidade, setErroQuantidade] = useState('');
+  const [doacoes, setDoacoes] = useState<Doacao[]>([]);
+
+  useEffect(() => {
+    carregarDoacoes();
+  }, []);
+
+  async function carregarDoacoes() {
+    try {
+      const salvo = await AsyncStorage.getItem(STORAGE_KEY);
+      if (salvo) {
+        setDoacoes(JSON.parse(salvo));
+      }
+    } catch (e) {
+      console.warn('Erro ao carregar doações do AsyncStorage', e);
+    }
+  }
+
+  async function salvarDoacoes(novaLista: Doacao[]) {
+    try {
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(novaLista));
+      setDoacoes(novaLista);
+    } catch (e) {
+      console.warn('Erro ao salvar doações no AsyncStorage', e);
+    }
+  }
 
   function validarQuantidade(valor: string) {
     setQuantidade(valor);
@@ -28,6 +63,30 @@ export default function CadastroDoacao() {
 
   function handleCadastrar() {
     validarQuantidade(quantidade);
+
+    if (
+      tipoItem.trim() === '' ||
+      quantidade.trim() === '' ||
+      !/^\d+$/.test(quantidade) ||
+      pontoDestino.trim() === ''
+    ) {
+      return;
+    }
+
+    const novaDoacao: Doacao = {
+      id: Date.now().toString(),
+      tipoItem: tipoItem.trim(),
+      quantidade: quantidade.trim(),
+      pontoDestino: pontoDestino.trim(),
+    };
+
+    const novaLista = [...doacoes, novaDoacao];
+    salvarDoacoes(novaLista);
+
+    setTipoItem('');
+    setQuantidade('');
+    setPontoDestino('');
+    setErroQuantidade('');
   }
 
   return (
@@ -76,6 +135,19 @@ export default function CadastroDoacao() {
           <TouchableOpacity style={styles.botao} onPress={handleCadastrar}>
             <Text style={styles.textoBotao}>Cadastrar Doação</Text>
           </TouchableOpacity>
+
+          {doacoes.length > 0 && (
+            <View style={styles.listaContainer}>
+              <Text style={styles.listaTitulo}>Doações cadastradas</Text>
+              {doacoes.map((d) => (
+                <View key={d.id} style={styles.listaItem}>
+                  <Text style={styles.listaItemTexto}>
+                    {d.tipoItem} — {d.quantidade} — {d.pontoDestino}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -108,4 +180,13 @@ const styles = StyleSheet.create({
     minHeight: 44,
   },
   textoBotao: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+  listaContainer: { marginTop: 24 },
+  listaTitulo: { fontSize: 16, fontWeight: 'bold', marginBottom: 8, color: '#1B3A5C' },
+  listaItem: {
+    padding: 10,
+    marginBottom: 6,
+    backgroundColor: '#F0F0F0',
+    borderRadius: 6,
+  },
+  listaItemTexto: { fontSize: 14 },
 });
