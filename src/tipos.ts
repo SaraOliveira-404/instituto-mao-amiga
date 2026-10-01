@@ -11,6 +11,7 @@ export type Doacao = {
   tipoItem: string;
   quantidade: string;
   pontoDestino: string;
+  criadoEm: string;
 };
 
 export type RootStackParamList = {

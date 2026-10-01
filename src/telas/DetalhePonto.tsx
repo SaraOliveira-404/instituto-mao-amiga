@@ -1,12 +1,21 @@
-import { ScrollView, Text, StyleSheet } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ScrollView, Text, View, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { RootStackParamList, Ponto } from '../tipos';
+import type { RootStackParamList, Ponto, Doacao } from '../tipos';
 import { pontosMock } from '../dados/Pontos';
+import { listarDoacoesPorPonto } from '../dados/Doacoes'; 
+import { ItemDoacao } from '../componentes/ItemDoacao';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'DetalhePonto'>;
 
 function PontoDetalhe({ ponto }: { ponto: Ponto }) {
+  const [doacoes, setDoacoes] = useState<Doacao[]>([]);
+
+  useEffect(() => {
+    listarDoacoesPorPonto(ponto.nome).then(setDoacoes);
+  }, [ponto.nome]);
+
   return (
     <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -14,6 +23,16 @@ function PontoDetalhe({ ponto }: { ponto: Ponto }) {
         <Text style={styles.campo}>Endereço: {ponto.endereco}</Text>
         <Text style={styles.campo}>Horário: {ponto.horario}</Text>
         <Text style={styles.campo}>{ponto.recebeOuDistribui}</Text>
+
+        <View style={styles.secaoDoacoes}>
+          <Text style={styles.secaoTitulo}>Doações recentes</Text>
+
+          {doacoes.length === 0 ? (
+            <Text style={styles.vazio}>Nenhuma doação registrada ainda.</Text>
+          ) : (
+            doacoes.slice(0, 5).map((d) => <ItemDoacao key={d.id} doacao={d} />)
+          )}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -35,4 +54,7 @@ const styles = StyleSheet.create({
   scrollContent: { padding: 20 },
   nome: { fontSize: 22, fontWeight: 'bold', color: '#1B3A5C', marginBottom: 12 },
   campo: { fontSize: 16, marginTop: 6, color: '#333333' },
+  secaoDoacoes: { marginTop: 24 },
+  secaoTitulo: { fontSize: 16, fontWeight: 'bold', color: '#1B3A5C', marginBottom: 8 },
+  vazio: { fontSize: 14, color: '#666' },
 });

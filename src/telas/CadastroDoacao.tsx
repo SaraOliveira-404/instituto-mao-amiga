@@ -12,8 +12,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Doacao, Ponto } from '../tipos';
 import { pontosMock } from '../dados/Pontos';
-import { carregarDoacoes, salvarDoacoes, carregarRascunho, salvarRascunho } from '../dados/Doacoes';
-import { ItemDoacao } from '../dados/ItemDoacao';
+import { listarDoacoes, salvarDoacao, carregarRascunho, salvarRascunho } from '../dados/Doacoes';
+import { ItemDoacao } from '../componentes/ItemDoacao';
 
 export default function CadastroDoacao() {
     const [tipoItem, setTipoItem] = useState('');
@@ -32,7 +32,7 @@ export default function CadastroDoacao() {
     // Carregar doações salvas
     useEffect(() => {
         (async () => {
-            const salvas = await carregarDoacoes();
+            const salvas = await listarDoacoes();
             setDoacoes(salvas);
 
             const r = await carregarRascunho();
@@ -136,18 +136,16 @@ export default function CadastroDoacao() {
         ) {
             return;
         }
-
-        const novaDoacao: Doacao = {
-            id: Date.now().toString(),
+        
+        const novaDoacao = await salvarDoacao({
             tipoItem: tipoItem.trim(),
             quantidade: quantidade.trim(),
             pontoDestino: pontoSelecionado!.nome,
-        };
+        });
 
-        const novaLista = [...doacoes, novaDoacao];
+        if (!novaDoacao) return; 
 
-        await salvarDoacoes(novaLista);
-        setDoacoes(novaLista);
+        setDoacoes([novaDoacao, ...doacoes]);
 
         // Limpar formulário
         setTipoItem('');
@@ -173,8 +171,6 @@ export default function CadastroDoacao() {
                     contentContainerStyle={styles.scrollContent}
                     keyboardShouldPersistTaps="handled"
                 >
-                    <Text style={styles.titulo}>Cadastro de Doação</Text>
-
                     <View style={styles.campo}>
                         <Text style={styles.label}>Tipo do item</Text>
 
@@ -380,4 +376,3 @@ const styles = StyleSheet.create({
         color: '#1B3A5C',
     },
 });
-

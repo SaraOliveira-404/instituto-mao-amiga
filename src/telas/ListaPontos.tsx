@@ -17,7 +17,6 @@ function PontoItem({ ponto, onPress }: { ponto: Ponto; onPress: () => void }) {
 function ListaPontos({ navigation }: Props) {
   return (
     <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
-      <Text style={styles.titulo}>Pontos de Coleta e Distribuição</Text>
       <TouchableOpacity
         style={styles.botaoCadastro}
         onPress={() => navigation.navigate('CadastroDoacao')}
@@ -42,7 +41,6 @@ export default ListaPontos;
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20 },
-  titulo: { fontSize: 20, fontWeight: 'bold', marginBottom: 16, color: '#1B3A5C' },
   item: {
     padding: 12,
     marginBottom: 8,
