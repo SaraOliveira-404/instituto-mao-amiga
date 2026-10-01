@@ -23,6 +23,13 @@ function ListaPontos({ navigation }: Props) {
       >
         <Text style={styles.botaoCadastroTexto}>+ Cadastrar Doação</Text>
       </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.botaoHistorico}
+        onPress={() => navigation.navigate('MinhasDoacoes')}
+      >
+        <Text style={styles.botaoCadastroTexto}>Minhas Doações</Text>
+      </TouchableOpacity>
+
       <FlatList
         data={pontosMock}
         keyExtractor={(ponto) => ponto.id}
@@ -51,6 +58,16 @@ const styles = StyleSheet.create({
   itemNome: { fontSize: 16, fontWeight: 'bold' },
   botaoCadastro: {
     backgroundColor: '#2e7d32',
+    borderRadius: 8,
+    padding: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+    minHeight: 44,
+  },
+
+  botaoHistorico: {
+    backgroundColor: '#1B3A5C',
     borderRadius: 8,
     padding: 12,
     alignItems: 'center',

@@ -10,10 +10,9 @@ import {
     Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import type { Doacao, Ponto } from '../tipos';
+import type { Ponto } from '../tipos';
 import { pontosMock } from '../dados/Pontos';
-import { listarDoacoes, salvarDoacao, carregarRascunho, salvarRascunho } from '../dados/Doacoes';
-import { ItemDoacao } from '../componentes/ItemDoacao';
+import { salvarDoacao, carregarRascunho, salvarRascunho } from '../dados/Doacoes';
 
 export default function CadastroDoacao() {
     const [tipoItem, setTipoItem] = useState('');
@@ -24,17 +23,14 @@ export default function CadastroDoacao() {
     const [erroQuantidade, setErroQuantidade] = useState('');
     const [erroPontoDestino, setErroPontoDestino] = useState('');
 
-    const [doacoes, setDoacoes] = useState<Doacao[]>([]);
     const [pontoSelecionado, setPontoSelecionado] = useState<Ponto | null>(null);
     const [mostrarPontos, setMostrarPontos] = useState(false);
     const [carregado, setCarregado] = useState(false);
+    const [mensagemSucesso, setMensagemSucesso] = useState('');
 
-    // Carregar doações salvas
+    // Carregar o rascunho salvo
     useEffect(() => {
         (async () => {
-            const salvas = await listarDoacoes();
-            setDoacoes(salvas);
-
             const r = await carregarRascunho();
             if (r) {
                 setTipoItem(r.tipoItem);
@@ -48,6 +44,7 @@ export default function CadastroDoacao() {
         })();
     }, []);
 
+    //Guarda o rascunho sempre que algum campo mudar, mas só depois que o rascunho inicial for carregado
     useEffect(() => {
         if (!carregado) return;
         const vazio = !tipoItem && !quantidade && !pontoDestino;
@@ -62,6 +59,15 @@ export default function CadastroDoacao() {
                 }
         );
     }, [carregado, tipoItem, quantidade, pontoDestino, pontoSelecionado]);
+
+    //Faz a mensagem de sucesso sumir sozinha depois de 1 segundos
+    useEffect(() => {
+        if (mensagemSucesso === '') return;
+
+        const timer = setTimeout(() => setMensagemSucesso(''), 1000);
+
+        return () => clearTimeout(timer);
+    }, [mensagemSucesso]);
 
     // Validação do tipo do item (não pode ser vazio)
     function validarTipoItem(valor: string) {
@@ -123,6 +129,8 @@ export default function CadastroDoacao() {
 
     // Cadastrar doação
     async function handleCadastrar() {
+        setMensagemSucesso('');
+
         validarTipoItem(tipoItem);
         validarQuantidade(quantidade);
 
@@ -136,16 +144,16 @@ export default function CadastroDoacao() {
         ) {
             return;
         }
-        
+
         const novaDoacao = await salvarDoacao({
             tipoItem: tipoItem.trim(),
             quantidade: quantidade.trim(),
             pontoDestino: pontoSelecionado!.nome,
         });
 
-        if (!novaDoacao) return; 
+        if (!novaDoacao) return;
 
-        setDoacoes([novaDoacao, ...doacoes]);
+        setMensagemSucesso(`Doação cadastrada com sucesso!`);
 
         // Limpar formulário
         setTipoItem('');
@@ -171,6 +179,8 @@ export default function CadastroDoacao() {
                     contentContainerStyle={styles.scrollContent}
                     keyboardShouldPersistTaps="handled"
                 >
+                    <Text style={styles.titulo}>Cadastro de Doação</Text>
+
                     <View style={styles.campo}>
                         <Text style={styles.label}>Tipo do item</Text>
 
@@ -254,19 +264,8 @@ export default function CadastroDoacao() {
                         </Text>
                     </TouchableOpacity>
 
-                    {doacoes.length > 0 && (
-                        <View style={styles.listaContainer}>
-                            <Text style={styles.listaTitulo}>
-                                Doações cadastradas
-                            </Text>
-
-                            {doacoes.map((d) => (
-                                <ItemDoacao
-                                    key={d.id}
-                                    doacao={d}
-                                />
-                            ))}
-                        </View>
+                    {mensagemSucesso !== '' && (
+                        <Text style={styles.sucesso}>{mensagemSucesso}</Text>
                     )}
                 </ScrollView>
             </KeyboardAvoidingView>
@@ -365,14 +364,12 @@ const styles = StyleSheet.create({
         fontSize: 16,
     },
 
-    listaContainer: {
-        marginTop: 24,
-    },
-
-    listaTitulo: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        marginBottom: 8,
-        color: '#1B3A5C',
+    //NOVO: estilo do aviso de sucesso
+    sucesso: {
+        color: '#2e7d32',
+        fontSize: 15,
+        fontWeight: '600',
+        textAlign: 'center',
+        marginTop: 16,
     },
 });

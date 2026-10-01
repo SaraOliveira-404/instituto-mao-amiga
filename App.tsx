@@ -4,7 +4,9 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import ListaPontos from './src/telas/ListaPontos';
 import DetalhePonto from './src/telas/DetalhePonto';
 import CadastroDoacao from './src/telas/CadastroDoacao';
+import MinhasDoacoes from './src/telas/MinhasDoacoes';
 import type { RootStackParamList } from './src/tipos';
+
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -27,6 +29,11 @@ export default function App() {
             name="CadastroDoacao"
             component={CadastroDoacao}
             options={{ title: 'Cadastrar Doação' }}
+          />
+          <Stack.Screen
+            name="MinhasDoacoes"
+            component={MinhasDoacoes}
+            options={{ title: 'Minhas Doações' }}
           />
         </Stack.Navigator>
       </NavigationContainer>

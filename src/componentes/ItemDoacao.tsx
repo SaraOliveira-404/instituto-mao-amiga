@@ -1,3 +1,4 @@
+import { memo } from 'react'; //NOVO: memo evita redesenhar o item quando nada nele mudou
 import { View, Text, StyleSheet } from 'react-native';
 import type { Doacao } from '../tipos';
 
@@ -22,7 +23,7 @@ function Linha({ rotulo, valor }: { rotulo: string; valor: string }) {
   );
 }
 
-export function ItemDoacao({ doacao }: { doacao: Doacao }) {
+export const ItemDoacao = memo(function ItemDoacao({ doacao }: { doacao: Doacao }) {
   return (
     <View style={styles.item}>
       <Text style={styles.titulo}>{doacao.tipoItem}</Text>
@@ -36,7 +37,7 @@ export function ItemDoacao({ doacao }: { doacao: Doacao }) {
       </Text>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   item: {
@@ -44,7 +45,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     backgroundColor: '#F0F0F0',
     borderRadius: 8,
-    borderLeftWidth: 4, 
+    borderLeftWidth: 4,
     borderLeftColor: '#2e7d32',
   },
   titulo: { fontSize: 16, fontWeight: 'bold', color: '#1B3A5C', marginBottom: 4 },
