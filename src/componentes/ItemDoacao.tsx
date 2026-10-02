@@ -1,7 +1,9 @@
+// Card de doação, usado em MinhasDoacoes(clicavel) e DetalheDoacao(não clicavel) por isso está em um aquivo separado para não precisar repetir o código
+
 import { memo } from 'react';
-import { Text, TouchableOpacity, StyleSheet } from 'react-native'; 
+import { Text, TouchableOpacity, StyleSheet } from 'react-native';
 import type { Doacao } from '../tipos';
-import { formatarData } from '../utilitarios/formatarData'; 
+import { formatarData } from '../utilitarios/formatarData';
 
 function Linha({ rotulo, valor }: { rotulo: string; valor: string }) {
   return (

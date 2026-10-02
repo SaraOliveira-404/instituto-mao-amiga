@@ -8,6 +8,7 @@ import { formatarData } from '../utilitarios/formatarData';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'DetalheDoacao'>;
 
+// Issue #10: TELA DE DETALHE DA DOAÇÃO 
 export default function DetalheDoacao({ route, navigation }: Props) {
   const { doacao } = route.params;
   const [mensagemSucesso, setMensagemSucesso] = useState('');
@@ -20,7 +21,7 @@ export default function DetalheDoacao({ route, navigation }: Props) {
     navigation.setParams({ mensagem: undefined });
   }, [route.params.mensagem, navigation]);
 
-  //mensagem some sozinha depois de 1 segundos
+  // Mensagem some sozinha depois de 1 segundo
   useEffect(() => {
     if (mensagemSucesso === '') return;
 
@@ -28,18 +29,19 @@ export default function DetalheDoacao({ route, navigation }: Props) {
     return () => clearTimeout(timer);
   }, [mensagemSucesso]);
 
-  // Pede confirmação antes de apagar
+  // Issue #10: pede confirmação (Alert) antes de apagar
   function confirmarExclusao() {
     Alert.alert(
       'Excluir doação',
       'Tem certeza que deseja excluir esta doação? Essa ação não pode ser desfeita.',
       [
-        // Cancelar só fecha o aviso, não apaga nada
         { text: 'Cancelar', style: 'cancel' },
         {
           text: 'Excluir',
           style: 'destructive',
           onPress: async () => {
+
+            // Apaga do armazenamento
             const ok = await excluirDoacao(doacao.id);
             if (ok) {
               // Volta ao histórico enviando a mensagem de sucesso
@@ -64,6 +66,7 @@ export default function DetalheDoacao({ route, navigation }: Props) {
 
         <Text style={styles.titulo}>{doacao.tipoItem}</Text>
 
+        {/* Issue #10: todos os campos da doação */}
         <Text style={styles.rotulo}>ID</Text>
         <Text style={styles.valor} selectable>{doacao.id}</Text>
 
@@ -82,6 +85,7 @@ export default function DetalheDoacao({ route, navigation }: Props) {
         <Text style={styles.rotulo}>Registrada em</Text>
         <Text style={styles.valor}>{formatarData(doacao.criadoEm)}</Text>
 
+        {/* Issue #11: abre o MESMO formulário do cadastro, já preenchido com esta doação */}
         <TouchableOpacity
           style={styles.botaoEditar}
           onPress={() => navigation.navigate('CadastroDoacao', { doacao })}
@@ -89,6 +93,7 @@ export default function DetalheDoacao({ route, navigation }: Props) {
           <Text style={styles.botaoTexto}>Editar doação</Text>
         </TouchableOpacity>
 
+        {/* Issue #10: botão de excluir (pede confirmação antes) */}
         <TouchableOpacity style={styles.botaoExcluir} onPress={confirmarExclusao}>
           <Text style={styles.botaoTexto}>Excluir doação</Text>
         </TouchableOpacity>
@@ -110,7 +115,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 32,
-    minHeight: 44,
+    minHeight: 44, 
   },
   botaoExcluir: {
     backgroundColor: '#d32f2f',
@@ -119,7 +124,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 12,
-    minHeight: 44,
+    minHeight: 44, 
   },
   botaoTexto: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
   sucesso: {

@@ -10,6 +10,7 @@ import type { RootStackParamList } from './src/tipos';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
+// Pilha de navegação: cada tela do app é registrada aqui.
 export default function App() {
   return (
     <SafeAreaProvider>
@@ -20,11 +21,14 @@ export default function App() {
             component={ListaPontos}
             options={{ title: 'Pontos de Coleta e Distribuição' }}
           />
+
           <Stack.Screen
             name="DetalhePonto"
             component={DetalhePonto}
             options={{ title: 'Detalhes do Ponto' }}
           />
+
+          {/* Issue #11: a mesma tela serve para cadastrar e editar. */}
           <Stack.Screen
             name="CadastroDoacao"
             component={CadastroDoacao}
@@ -32,11 +36,14 @@ export default function App() {
               title: route.params?.doacao ? 'Editar Doação' : 'Cadastrar Doação',
             })}
           />
+          {/* Issue #09: tela do histórico de doações */}
           <Stack.Screen
             name="MinhasDoacoes"
             component={MinhasDoacoes}
             options={{ title: 'Minhas Doações' }}
           />
+
+          {/* Issue #10: tela de detalhe (com exclusão e botão de editar) */}
           <Stack.Screen
             name="DetalheDoacao"
             component={DetalheDoacao}

@@ -10,28 +10,33 @@ import {
     Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack'; 
-import type { Doacao, Ponto, RootStackParamList } from '../tipos'; 
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { Doacao, Ponto, RootStackParamList } from '../tipos';
 import { pontosMock } from '../dados/Pontos';
-import { tiposItem } from '../dados/TiposItem'; 
-import { salvarDoacao, atualizarDoacao, carregarRascunho, salvarRascunho } from '../dados/Doacoes'; 
+import { tiposItem } from '../dados/TiposItem';
+import { salvarDoacao, atualizarDoacao, carregarRascunho, salvarRascunho } from '../dados/Doacoes';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'CadastroDoacao'>; 
+type Props = NativeStackScreenProps<RootStackParamList, 'CadastroDoacao'>;
 
-export default function CadastroDoacao({ route, navigation }: Props) { 
+// FORMULÁRIO ÚNICO: serve para CADASTRAR uma doação nova e para EDITAR uma existente.
+export default function CadastroDoacao({ route, navigation }: Props) {
+    // Issue #11: se a tela recebeu uma doação pela navegação, está em modo edição.
     const doacaoEditando = route.params?.doacao;
     const modoEdicao = doacaoEditando !== undefined;
 
+    // Campos do formulário. Issue #11: na edição já começam preenchidos com os dados da doação.
     const [tipoItem, setTipoItem] = useState(doacaoEditando?.tipoItem ?? '');
     const [quantidade, setQuantidade] = useState(doacaoEditando?.quantidade ?? '');
     const [pontoDestino, setPontoDestino] = useState(doacaoEditando?.pontoDestino ?? '');
     const [descricao, setDescricao] = useState(doacaoEditando?.descricao ?? '');
 
+    // Mensagens de erro de cada campo (vazias quando está tudo certo)
     const [erroTipoItem, setErroTipoItem] = useState('');
     const [erroQuantidade, setErroQuantidade] = useState('');
     const [erroPontoDestino, setErroPontoDestino] = useState('');
     const [erroDescricao, setErroDescricao] = useState('');
 
+    // Ponto escolhido na lista 
     const [pontoSelecionado, setPontoSelecionado] = useState<Ponto | null>(
         doacaoEditando
             ? pontosMock.find((p) => p.nome === doacaoEditando.pontoDestino) ?? null
@@ -42,9 +47,10 @@ export default function CadastroDoacao({ route, navigation }: Props) {
     const [carregado, setCarregado] = useState(false);
     const [mensagemSucesso, setMensagemSucesso] = useState('');
 
+    // Os outros campos só liberam depois que o tipo do item é escolhido
     const tipoSelecionado = tipoItem.trim() !== '';
 
-    // Carregar o rascunho salvo
+    // RASCUNHO (só no cadastro novo): ao abrir, recupera o que a pessoa já tinha preenchido
     useEffect(() => {
         if (modoEdicao) return;
 
@@ -54,7 +60,7 @@ export default function CadastroDoacao({ route, navigation }: Props) {
                 setTipoItem(r.tipoItem);
                 setQuantidade(r.quantidade);
                 setPontoDestino(r.pontoDestino);
-                setDescricao(r.descricao ?? ''); 
+                setDescricao(r.descricao ?? '');
                 setPontoSelecionado(
                     pontosMock.find((p) => p.id === r.pontoId) ?? null
                 );
@@ -63,6 +69,7 @@ export default function CadastroDoacao({ route, navigation }: Props) {
         })();
     }, []);
 
+    // RASCUNHO: a cada mudança nos campos, salva o estado atual
     useEffect(() => {
         if (!carregado || modoEdicao) return;
         const vazio = !tipoItem && !quantidade && !pontoDestino && !descricao;
@@ -74,12 +81,12 @@ export default function CadastroDoacao({ route, navigation }: Props) {
                     quantidade,
                     pontoDestino,
                     pontoId: pontoSelecionado?.id ?? null,
-                    descricao, 
+                    descricao,
                 }
         );
-    }, [carregado, tipoItem, quantidade, pontoDestino, pontoSelecionado, descricao]); 
+    }, [carregado, tipoItem, quantidade, pontoDestino, pontoSelecionado, descricao]);
 
-    // Faz a mensagem de sucesso sumir sozinha depois de 1 segundos
+    // Faz a mensagem de sucesso sumir sozinha depois de 1 segundo
     useEffect(() => {
         if (mensagemSucesso === '') return;
 
@@ -87,7 +94,9 @@ export default function CadastroDoacao({ route, navigation }: Props) {
         return () => clearTimeout(timer);
     }, [mensagemSucesso]);
 
-    // Validação do tipo do item (precisa estar selecionado)
+    // ---------- VALIDAÇÕES ----------
+
+    // Tipo do item: precisa estar selecionado
     function validarTipoItem(valor: string) {
         setTipoItem(valor);
 
@@ -104,7 +113,7 @@ export default function CadastroDoacao({ route, navigation }: Props) {
         setMostrarTipos(false);
     }
 
-    // Validação da quantidade (não pode ser vazio e deve ser um número inteiro)
+    // Quantidade: não pode ser vazia e deve ser um número inteiro
     function validarQuantidade(valor: string) {
         setQuantidade(valor);
 
@@ -121,7 +130,7 @@ export default function CadastroDoacao({ route, navigation }: Props) {
         setErroQuantidade('');
     }
 
-    //Validação da descrição (não pode ser vazia)
+    // Descrição: não pode ser vazia
     function validarDescricao(valor: string) {
         setDescricao(valor);
 
@@ -133,7 +142,7 @@ export default function CadastroDoacao({ route, navigation }: Props) {
         setErroDescricao('');
     }
 
-    // Validação do ponto de destino (não pode ser vazio e deve ser selecionado da lista)
+    // Ponto de destino: deve ter sido escolhido na lista (não vale só digitar o nome)
     function validarPontoDestino() {
         if (pontoSelecionado === null) {
             setErroPontoDestino('Selecione um ponto de destino.');
@@ -150,7 +159,7 @@ export default function CadastroDoacao({ route, navigation }: Props) {
         setMostrarPontos(false);
     }
 
-    // Filtrar pontos conforme o texto digitado
+    // Lista de pontos para escolher
     const pontosFiltrados = [...pontosMock]
         .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
         .filter((ponto) =>
@@ -161,17 +170,19 @@ export default function CadastroDoacao({ route, navigation }: Props) {
                 .includes(pontoDestino.toLowerCase())
         );
 
-    // Cadastrar uma doação nova OU salvar as alterações de uma existente
+    // ---------- SALVAR ----------
+    // Cadastra uma doação nova OU salva as alterações de uma existente
     async function handleCadastrar() {
         setMensagemSucesso('');
 
-        // As mesmas validações valem para cadastro e edição
+        // Roda todas as validações para mostrar todos os erros de uma vez
         validarTipoItem(tipoItem);
         validarQuantidade(quantidade);
         validarDescricao(descricao);
 
         const pontoValido = validarPontoDestino();
 
+        // Se algum campo estiver inválido, para aqui e não salva nada
         if (
             tipoItem.trim() === '' ||
             quantidade.trim() === '' ||
@@ -182,14 +193,14 @@ export default function CadastroDoacao({ route, navigation }: Props) {
             return;
         }
 
-        //Edição, atualiza a doação existente
+        // Issue #11: EDIÇÃO. Mantém o mesmo id (...doacaoEditando) e atualiza a doação existente,
         if (doacaoEditando) {
             const atualizada: Doacao = {
                 ...doacaoEditando,
                 tipoItem: tipoItem.trim(),
                 quantidade: quantidade.trim(),
                 pontoDestino: pontoSelecionado!.nome,
-                descricao: descricao.trim(), 
+                descricao: descricao.trim(),
             };
 
             const ok = await atualizarDoacao(atualizada);
@@ -201,30 +212,30 @@ export default function CadastroDoacao({ route, navigation }: Props) {
             });
             return;
         }
-
+        // Salva o cadastro novo
         const novaDoacao = await salvarDoacao({
             tipoItem: tipoItem.trim(),
             quantidade: quantidade.trim(),
             pontoDestino: pontoSelecionado!.nome,
-            descricao: descricao.trim(), 
+            descricao: descricao.trim(),
         });
 
         if (!novaDoacao) return;
 
         setMensagemSucesso(`Doação nº ${novaDoacao.id} cadastrada com sucesso!`);
 
-        // Limpar formulário
+        // Limpa o formulário para um novo cadastro
         setTipoItem('');
         setQuantidade('');
         setPontoDestino('');
-        setDescricao(''); 
+        setDescricao('');
         setPontoSelecionado(null);
         setMostrarTipos(false);
 
         setErroTipoItem('');
         setErroQuantidade('');
         setErroPontoDestino('');
-        setErroDescricao(''); 
+        setErroDescricao('');
     }
 
     return (
@@ -240,11 +251,7 @@ export default function CadastroDoacao({ route, navigation }: Props) {
                     contentContainerStyle={styles.scrollContent}
                     keyboardShouldPersistTaps="handled"
                 >
-                    <Text style={styles.titulo}>
-                        {modoEdicao ? `Editar Doação nº ${doacaoEditando!.id}` : 'Cadastro de Doação'}
-                    </Text>
-
-                    {/* Campo tipo doação */}
+                    {/* Campo tipo do item (seletor com lista) */}
                     <View style={styles.campo}>
                         <Text style={styles.label}>Tipo do item</Text>
 
@@ -276,7 +283,7 @@ export default function CadastroDoacao({ route, navigation }: Props) {
                         )}
                     </View>
 
-                    {/* Campo descrição */}
+                    {/* Campo descrição (bloqueado até escolher o tipo) */}
                     <View style={styles.campo}>
                         <Text style={styles.label}>Descrição</Text>
 
@@ -294,7 +301,7 @@ export default function CadastroDoacao({ route, navigation }: Props) {
                         )}
                     </View>
 
-                    {/* Campo quantidade */}
+                    {/* Campo quantidade (só números inteiros) */}
                     <View style={styles.campo}>
                         <Text style={styles.label}>Quantidade</Text>
 
@@ -312,7 +319,7 @@ export default function CadastroDoacao({ route, navigation }: Props) {
                         )}
                     </View>
 
-                    {/* Campo ponto de destino */}
+                    {/* Campo ponto de destino (digita para filtrar e escolhe na lista) */}
                     <View style={styles.campo}>
                         <Text style={styles.label}>Ponto de destino</Text>
 
@@ -324,7 +331,7 @@ export default function CadastroDoacao({ route, navigation }: Props) {
                             onFocus={() => setMostrarPontos(true)}
                             onChangeText={(texto) => {
                                 setPontoDestino(texto);
-                                setPontoSelecionado(null);
+                                setPontoSelecionado(null); 
                                 setErroPontoDestino('');
                                 setMostrarPontos(true);
                             }}
@@ -399,14 +406,6 @@ const styles = StyleSheet.create({
         flexGrow: 1,
     },
 
-    titulo: {
-        fontSize: 22,
-        fontWeight: 'bold',
-        marginBottom: 24,
-        textAlign: 'center',
-        color: '#1B3A5C',
-    },
-
     campo: {
         marginBottom: 16,
     },
@@ -437,7 +436,7 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         paddingHorizontal: 12,
         paddingVertical: 10,
-        minHeight: 44,
+        minHeight: 44, 
         justifyContent: 'center',
     },
 
@@ -473,7 +472,7 @@ const styles = StyleSheet.create({
 
     pontoItem: {
         padding: 12,
-        minHeight: 44,
+        minHeight: 44, 
         borderBottomWidth: 1,
         borderBottomColor: '#eee',
     },
@@ -497,7 +496,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         marginTop: 8,
-        minHeight: 44,
+        minHeight: 44, 
     },
 
     textoBotao: {
@@ -514,7 +513,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         marginTop: 12,
-        minHeight: 44,
+        minHeight: 44, 
     },
 
     textoBotaoCancelar: {

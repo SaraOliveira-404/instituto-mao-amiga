@@ -1,3 +1,5 @@
+// Tipos compartilhados pelo app inteiro
+
 export type Ponto = {
   id: string;
   nome: string;
@@ -14,6 +16,7 @@ export type Doacao = {
   criadoEm: string;
   descricao: string;
 };
+
 
 export type RootStackParamList = {
   ListaPontos: undefined;

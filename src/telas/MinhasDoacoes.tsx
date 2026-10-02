@@ -21,23 +21,22 @@ import { ItemDoacao } from '../componentes/ItemDoacao';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'MinhasDoacoes'>;
 
-// Usada no filtro e nas sugestões para a busca ignorar maiúsculas e acentos.
 function normalizar(texto: string): string {
   return texto
-    .normalize('NFD') 
+    .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '') 
     .toLowerCase();
 }
 
+// Issue #09: TELA DE HISTÓRICO (lista todas as doações salvas, com filtro por tipo)
 export default function MinhasDoacoes({ navigation, route }: Props) {
-  const [doacoes, setDoacoes] = useState<Doacao[]>([]);
+  const [doacoes, setDoacoes] = useState<Doacao[]>([]); 
   const [carregando, setCarregando] = useState(true);
   const [mensagemSucesso, setMensagemSucesso] = useState('');
+
   const [busca, setBusca] = useState('');
-  // Controla se a lista de sugestões de tipo está visível
   const [mostrarSugestoes, setMostrarSugestoes] = useState(false);
 
-  // Roda toda vez que a tela volta a ficar visível. Por isso uma doação nova aparece (e uma excluída some) sem fechar o app.
   useFocusEffect(
     useCallback(() => {
       listarDoacoes().then((lista) => {
@@ -47,6 +46,7 @@ export default function MinhasDoacoes({ navigation, route }: Props) {
     }, [])
   );
 
+  // Recebe a mensagem de sucesso enviada por outra tela (ex: "Doação nº 3 excluída")
   useEffect(() => {
     const mensagem = route.params?.mensagem;
     if (!mensagem) return;
@@ -55,7 +55,7 @@ export default function MinhasDoacoes({ navigation, route }: Props) {
     navigation.setParams({ mensagem: undefined });
   }, [route.params?.mensagem, navigation]);
 
-  //Mensagem some sozinha depois de 1 segundos
+  // Mensagem some sozinha depois de 1 segundo
   useEffect(() => {
     if (mensagemSucesso === '') return;
 
@@ -63,7 +63,7 @@ export default function MinhasDoacoes({ navigation, route }: Props) {
     return () => clearTimeout(timer);
   }, [mensagemSucesso]);
 
-  // Abre o detalhe da doação tocada
+  // Issue #10: ao tocar num item, abre o detalhe 
   const abrirDetalhe = useCallback(
     (doacao: Doacao) => {
       navigation.navigate('DetalheDoacao', { doacao });
@@ -73,15 +73,15 @@ export default function MinhasDoacoes({ navigation, route }: Props) {
 
   if (carregando) return null;
 
+  // Issue #12: a lista filtrada
   const termo = normalizar(busca.trim());
   const doacoesFiltradas =
     termo === ''
-      ? doacoes
+      ? doacoes 
       : doacoes.filter((d) => normalizar(d.tipoItem).includes(termo));
 
   const sugestoes = tiposItem.filter((tipo) => normalizar(tipo).includes(termo));
 
-  // Ao tocar numa sugestão, preenche o campo (o filtro da lista já passa a valer) e fecha tudo
   function selecionarSugestao(tipo: string) {
     setBusca(tipo);
     setMostrarSugestoes(false);
@@ -113,11 +113,10 @@ export default function MinhasDoacoes({ navigation, route }: Props) {
           />
         )}
 
-        {/* Lista de sugestões de tipo de item, filtrada conforme a pessoa digita */}
         {mostrarSugestoes && sugestoes.length > 0 && (
           <ScrollView
             style={styles.listaSugestoes}
-            keyboardShouldPersistTaps="handled"
+            keyboardShouldPersistTaps="handled" 
             nestedScrollEnabled
           >
             {sugestoes.map((tipo) => (
@@ -132,6 +131,7 @@ export default function MinhasDoacoes({ navigation, route }: Props) {
           </ScrollView>
         )}
 
+        {/* Issue #09: lista com FlatList; keyExtractor usa o id da doação */}
         <FlatList
           data={doacoesFiltradas}
           keyExtractor={(doacao) => doacao.id}
@@ -142,6 +142,7 @@ export default function MinhasDoacoes({ navigation, route }: Props) {
           }
           ListEmptyComponent={
             doacoes.length === 0 ? (
+            
               <View style={styles.vazio}>
                 <Text style={styles.vazioTexto}>Você ainda não registrou nenhuma doação.</Text>
                 <TouchableOpacity
@@ -152,6 +153,7 @@ export default function MinhasDoacoes({ navigation, route }: Props) {
                 </TouchableOpacity>
               </View>
             ) : (
+              
               <View style={styles.vazio}>
                 <Text style={styles.vazioTexto}>
                   Nenhuma doação encontrada para "{busca.trim()}".
@@ -183,7 +185,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 8,
   },
-  
+
   listaSugestoes: {
     maxHeight: 180, 
     marginHorizontal: 20,
@@ -196,7 +198,7 @@ const styles = StyleSheet.create({
   },
   sugestaoItem: {
     padding: 12,
-    minHeight: 44,
+    minHeight: 44, 
     justifyContent: 'center',
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
@@ -209,7 +211,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 44,
+    minHeight: 44, 
   },
   botaoTexto: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
   sucesso: {
