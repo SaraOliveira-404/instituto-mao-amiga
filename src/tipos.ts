@@ -17,7 +17,7 @@ export type Doacao = {
 export type RootStackParamList = {
   ListaPontos: undefined;
   DetalhePonto: { pontoId: string };
-  CadastroDoacao: undefined;
+  CadastroDoacao: { doacao?: Doacao } | undefined;
   MinhasDoacoes: { mensagem?: string } | undefined;
-  DetalheDoacao: { doacao: Doacao };
+  DetalheDoacao: { doacao: Doacao; mensagem?: string };
 };

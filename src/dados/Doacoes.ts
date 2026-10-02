@@ -12,7 +12,6 @@ export type Rascunho = {
   pontoId: string | null;
 };
 
-//O id e a data são gerados aqui dentro, no storage
 type NovaDoacao = Omit<Doacao, 'id' | 'criadoEm'>;
 
 async function lerTodas(): Promise<Doacao[]> {
@@ -53,6 +52,21 @@ export async function salvarDoacao(dados: NovaDoacao): Promise<Doacao | null> {
   } catch (e) {
     console.warn('Erro ao salvar doação no AsyncStorage', e);
     return null;
+  }
+}
+
+export async function atualizarDoacao(doacao: Doacao): Promise<boolean> {
+  try {
+    const todas = await lerTodas();
+    const indice = todas.findIndex((d) => d.id === doacao.id);
+    if (indice === -1) return false;
+
+    todas[indice] = doacao;
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(todas));
+    return true;
+  } catch (e) {
+    console.warn('Erro ao atualizar doação no AsyncStorage', e);
+    return false;
   }
 }
 

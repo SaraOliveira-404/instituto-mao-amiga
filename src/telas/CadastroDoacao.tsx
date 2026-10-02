@@ -10,26 +10,38 @@ import {
     Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import type { Ponto } from '../tipos';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack'; 
+import type { Doacao, Ponto, RootStackParamList } from '../tipos'; 
 import { pontosMock } from '../dados/Pontos';
-import { salvarDoacao, carregarRascunho, salvarRascunho } from '../dados/Doacoes';
+import { salvarDoacao, atualizarDoacao, carregarRascunho, salvarRascunho } from '../dados/Doacoes'; 
 
-export default function CadastroDoacao() {
-    const [tipoItem, setTipoItem] = useState('');
-    const [quantidade, setQuantidade] = useState('');
-    const [pontoDestino, setPontoDestino] = useState('');
+type Props = NativeStackScreenProps<RootStackParamList, 'CadastroDoacao'>; 
+
+export default function CadastroDoacao({ route, navigation }: Props) { 
+    const doacaoEditando = route.params?.doacao;
+    const modoEdicao = doacaoEditando !== undefined;
+
+    const [tipoItem, setTipoItem] = useState(doacaoEditando?.tipoItem ?? '');
+    const [quantidade, setQuantidade] = useState(doacaoEditando?.quantidade ?? '');
+    const [pontoDestino, setPontoDestino] = useState(doacaoEditando?.pontoDestino ?? '');
 
     const [erroTipoItem, setErroTipoItem] = useState('');
     const [erroQuantidade, setErroQuantidade] = useState('');
     const [erroPontoDestino, setErroPontoDestino] = useState('');
 
-    const [pontoSelecionado, setPontoSelecionado] = useState<Ponto | null>(null);
+    const [pontoSelecionado, setPontoSelecionado] = useState<Ponto | null>(
+        doacaoEditando
+            ? pontosMock.find((p) => p.nome === doacaoEditando.pontoDestino) ?? null
+            : null
+    );
     const [mostrarPontos, setMostrarPontos] = useState(false);
     const [carregado, setCarregado] = useState(false);
     const [mensagemSucesso, setMensagemSucesso] = useState('');
 
     // Carregar o rascunho salvo
     useEffect(() => {
+        if (modoEdicao) return;
+
         (async () => {
             const r = await carregarRascunho();
             if (r) {
@@ -44,9 +56,8 @@ export default function CadastroDoacao() {
         })();
     }, []);
 
-    //Guarda o rascunho sempre que algum campo mudar, mas só depois que o rascunho inicial for carregado
     useEffect(() => {
-        if (!carregado) return;
+        if (!carregado || modoEdicao) return;
         const vazio = !tipoItem && !quantidade && !pontoDestino;
         salvarRascunho(
             vazio
@@ -60,12 +71,11 @@ export default function CadastroDoacao() {
         );
     }, [carregado, tipoItem, quantidade, pontoDestino, pontoSelecionado]);
 
-    //Faz a mensagem de sucesso sumir sozinha depois de 1 segundos
+    // Faz a mensagem de sucesso sumir sozinha depois de 3 segundos
     useEffect(() => {
         if (mensagemSucesso === '') return;
 
-        const timer = setTimeout(() => setMensagemSucesso(''), 1000);
-
+        const timer = setTimeout(() => setMensagemSucesso(''), 3000);
         return () => clearTimeout(timer);
     }, [mensagemSucesso]);
 
@@ -127,10 +137,11 @@ export default function CadastroDoacao() {
                 .includes(pontoDestino.toLowerCase())
         );
 
-    // Cadastrar doação
+    // Cadastrar uma doação nova OU salvar as alterações de uma existente
     async function handleCadastrar() {
         setMensagemSucesso('');
 
+        // As mesmas validações valem para cadastro e edição
         validarTipoItem(tipoItem);
         validarQuantidade(quantidade);
 
@@ -145,6 +156,25 @@ export default function CadastroDoacao() {
             return;
         }
 
+        //Edição, atualiza a doação existente
+        if (doacaoEditando) {
+            const atualizada: Doacao = {
+                ...doacaoEditando,
+                tipoItem: tipoItem.trim(),
+                quantidade: quantidade.trim(),
+                pontoDestino: pontoSelecionado!.nome,
+            };
+
+            const ok = await atualizarDoacao(atualizada);
+            if (!ok) return;
+
+            navigation.popTo('DetalheDoacao', {
+                doacao: atualizada,
+                mensagem: `Doação nº ${atualizada.id} editada com sucesso!`,
+            });
+            return;
+        }
+
         const novaDoacao = await salvarDoacao({
             tipoItem: tipoItem.trim(),
             quantidade: quantidade.trim(),
@@ -153,7 +183,7 @@ export default function CadastroDoacao() {
 
         if (!novaDoacao) return;
 
-        setMensagemSucesso(`Doação cadastrada com sucesso!`);
+        setMensagemSucesso(`Doação nº ${novaDoacao.id} cadastrada com sucesso!`);
 
         // Limpar formulário
         setTipoItem('');
@@ -179,7 +209,9 @@ export default function CadastroDoacao() {
                     contentContainerStyle={styles.scrollContent}
                     keyboardShouldPersistTaps="handled"
                 >
-                    <Text style={styles.titulo}>Cadastro de Doação</Text>
+                    <Text style={styles.titulo}>
+                        {modoEdicao ? `Editar Doação nº ${doacaoEditando!.id}` : 'Cadastro de Doação'}
+                    </Text>
 
                     <View style={styles.campo}>
                         <Text style={styles.label}>Tipo do item</Text>
@@ -260,9 +292,18 @@ export default function CadastroDoacao() {
                         onPress={handleCadastrar}
                     >
                         <Text style={styles.textoBotao}>
-                            Cadastrar Doação
+                            {modoEdicao ? 'Salvar alterações' : 'Cadastrar Doação'}
                         </Text>
                     </TouchableOpacity>
+
+                    {modoEdicao && (
+                        <TouchableOpacity
+                            style={styles.botaoCancelar}
+                            onPress={() => navigation.goBack()}
+                        >
+                            <Text style={styles.textoBotaoCancelar}>Cancelar</Text>
+                        </TouchableOpacity>
+                    )}
 
                     {mensagemSucesso !== '' && (
                         <Text style={styles.sucesso}>{mensagemSucesso}</Text>
@@ -360,6 +401,23 @@ const styles = StyleSheet.create({
 
     textoBotao: {
         color: '#fff',
+        fontWeight: 'bold',
+        fontSize: 16,
+    },
+
+    botaoCancelar: {
+        borderWidth: 1,
+        borderColor: '#666',
+        borderRadius: 8,
+        paddingVertical: 14,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: 12,
+        minHeight: 44,
+    },
+
+    textoBotaoCancelar: {
+        color: '#333333',
         fontWeight: 'bold',
         fontSize: 16,
     },

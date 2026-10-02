@@ -8,7 +8,6 @@ import MinhasDoacoes from './src/telas/MinhasDoacoes';
 import DetalheDoacao from './src/telas/DetalheDoacao';
 import type { RootStackParamList } from './src/tipos';
 
-
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function App() {
@@ -29,7 +28,9 @@ export default function App() {
           <Stack.Screen
             name="CadastroDoacao"
             component={CadastroDoacao}
-            options={{ title: 'Cadastrar Doação' }}
+            options={({ route }) => ({
+              title: route.params?.doacao ? 'Editar Doação' : 'Cadastrar Doação',
+            })}
           />
           <Stack.Screen
             name="MinhasDoacoes"
