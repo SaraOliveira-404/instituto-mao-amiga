@@ -56,6 +56,18 @@ export async function salvarDoacao(dados: NovaDoacao): Promise<Doacao | null> {
   }
 }
 
+export async function excluirDoacao(id: string): Promise<boolean> {
+  try {
+    const todas = await lerTodas();
+    const restantes = todas.filter((d) => d.id !== id);
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(restantes));
+    return true;
+  } catch (e) {
+    console.warn('Erro ao excluir doação do AsyncStorage', e);
+    return false;
+  }
+}
+
 export async function listarDoacoesPorPonto(nomePonto: string): Promise<Doacao[]> {
   const todas = await listarDoacoes();
   return todas.filter((d) => d.pontoDestino === nomePonto);

@@ -364,7 +364,6 @@ const styles = StyleSheet.create({
         fontSize: 16,
     },
 
-    //NOVO: estilo do aviso de sucesso
     sucesso: {
         color: '#2e7d32',
         fontSize: 15,

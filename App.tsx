@@ -5,6 +5,7 @@ import ListaPontos from './src/telas/ListaPontos';
 import DetalhePonto from './src/telas/DetalhePonto';
 import CadastroDoacao from './src/telas/CadastroDoacao';
 import MinhasDoacoes from './src/telas/MinhasDoacoes';
+import DetalheDoacao from './src/telas/DetalheDoacao';
 import type { RootStackParamList } from './src/tipos';
 
 
@@ -34,6 +35,11 @@ export default function App() {
             name="MinhasDoacoes"
             component={MinhasDoacoes}
             options={{ title: 'Minhas Doações' }}
+          />
+          <Stack.Screen
+            name="DetalheDoacao"
+            component={DetalheDoacao}
+            options={{ title: 'Detalhe da Doação' }}
           />
         </Stack.Navigator>
       </NavigationContainer>

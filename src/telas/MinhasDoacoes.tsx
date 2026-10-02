@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react'; 
 import { Text, TouchableOpacity, FlatList, View, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -9,10 +9,12 @@ import { ItemDoacao } from '../componentes/ItemDoacao';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'MinhasDoacoes'>;
 
-export default function MinhasDoacoes({ navigation }: Props) {
+export default function MinhasDoacoes({ navigation, route }: Props) { 
   const [doacoes, setDoacoes] = useState<Doacao[]>([]);
   const [carregando, setCarregando] = useState(true);
+  const [mensagemSucesso, setMensagemSucesso] = useState('');
 
+  // Roda toda vez que a tela volta a ficar visível. Por isso uma doação nova aparece (e uma excluída some) sem fechar o app.
   useFocusEffect(
     useCallback(() => {
       listarDoacoes().then((lista) => {
@@ -22,16 +24,46 @@ export default function MinhasDoacoes({ navigation }: Props) {
     }, [])
   );
 
+
+  useEffect(() => {
+    const mensagem = route.params?.mensagem;
+    if (!mensagem) return;
+
+    setMensagemSucesso(mensagem);
+    navigation.setParams({ mensagem: undefined });
+  }, [route.params?.mensagem, navigation]);
+
+  //Mensagem some sozinha depois de 1 segundos
+  useEffect(() => {
+    if (mensagemSucesso === '') return;
+
+    const timer = setTimeout(() => setMensagemSucesso(''), 1000);
+    return () => clearTimeout(timer);
+  }, [mensagemSucesso]);
+
+  // Abre o detalhe da doação tocada. Usa useCallback para a função não ser recriada a cada render (assim o React.memo do item continua funcionando)
+  const abrirDetalhe = useCallback(
+    (doacao: Doacao) => {
+      navigation.navigate('DetalheDoacao', { doacao });
+    },
+    [navigation]
+  );
+
+  // Enquanto carrega, não mostra nada (evita piscar a mensagem de "vazio")
   if (carregando) return null;
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
+      {mensagemSucesso !== '' && (
+        <Text style={styles.sucesso}>{mensagemSucesso}</Text>
+      )}
+
       <FlatList
         data={doacoes}
-        keyExtractor={(doacao) => doacao.id} 
-        renderItem={({ item }) => <ItemDoacao doacao={item} />}
+        keyExtractor={(doacao) => doacao.id}
+        renderItem={({ item }) => <ItemDoacao doacao={item} onPress={abrirDetalhe} />}
         contentContainerStyle={doacoes.length === 0 ? styles.vazioContainer : styles.lista}
-        
+        // Estado vazio: mensagem + botão que leva ao cadastro
         ListEmptyComponent={
           <View style={styles.vazio}>
             <Text style={styles.vazioTexto}>Você ainda não registrou nenhuma doação.</Text>
@@ -64,4 +96,12 @@ const styles = StyleSheet.create({
     minHeight: 44,
   },
   botaoTexto: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+  sucesso: {
+    color: '#c41d1d',
+    fontSize: 15,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 16,
+    paddingHorizontal: 20,
+  },
 });
