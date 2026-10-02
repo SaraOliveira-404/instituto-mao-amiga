@@ -73,13 +73,15 @@ export default function DetalheDoacao({ route, navigation }: Props) {
         <Text style={styles.rotulo}>Quantidade</Text>
         <Text style={styles.valor}>{doacao.quantidade}</Text>
 
+        <Text style={styles.rotulo}>Descrição</Text>
+        <Text style={styles.valor}>{doacao.descricao}</Text>
+
         <Text style={styles.rotulo}>Ponto de destino</Text>
         <Text style={styles.valor}>{doacao.pontoDestino}</Text>
 
         <Text style={styles.rotulo}>Registrada em</Text>
         <Text style={styles.valor}>{formatarData(doacao.criadoEm)}</Text>
 
-        //Abre o mesmo formulário do cadastro, já preenchido com esta doação 
         <TouchableOpacity
           style={styles.botaoEditar}
           onPress={() => navigation.navigate('CadastroDoacao', { doacao })}

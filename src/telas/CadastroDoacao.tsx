@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'; 
 import type { Doacao, Ponto, RootStackParamList } from '../tipos'; 
 import { pontosMock } from '../dados/Pontos';
+import { tiposItem } from '../dados/TiposItem'; 
 import { salvarDoacao, atualizarDoacao, carregarRascunho, salvarRascunho } from '../dados/Doacoes'; 
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CadastroDoacao'>; 
@@ -24,10 +25,12 @@ export default function CadastroDoacao({ route, navigation }: Props) {
     const [tipoItem, setTipoItem] = useState(doacaoEditando?.tipoItem ?? '');
     const [quantidade, setQuantidade] = useState(doacaoEditando?.quantidade ?? '');
     const [pontoDestino, setPontoDestino] = useState(doacaoEditando?.pontoDestino ?? '');
+    const [descricao, setDescricao] = useState(doacaoEditando?.descricao ?? '');
 
     const [erroTipoItem, setErroTipoItem] = useState('');
     const [erroQuantidade, setErroQuantidade] = useState('');
     const [erroPontoDestino, setErroPontoDestino] = useState('');
+    const [erroDescricao, setErroDescricao] = useState('');
 
     const [pontoSelecionado, setPontoSelecionado] = useState<Ponto | null>(
         doacaoEditando
@@ -35,8 +38,11 @@ export default function CadastroDoacao({ route, navigation }: Props) {
             : null
     );
     const [mostrarPontos, setMostrarPontos] = useState(false);
+    const [mostrarTipos, setMostrarTipos] = useState(false); 
     const [carregado, setCarregado] = useState(false);
     const [mensagemSucesso, setMensagemSucesso] = useState('');
+
+    const tipoSelecionado = tipoItem.trim() !== '';
 
     // Carregar o rascunho salvo
     useEffect(() => {
@@ -48,6 +54,7 @@ export default function CadastroDoacao({ route, navigation }: Props) {
                 setTipoItem(r.tipoItem);
                 setQuantidade(r.quantidade);
                 setPontoDestino(r.pontoDestino);
+                setDescricao(r.descricao ?? ''); 
                 setPontoSelecionado(
                     pontosMock.find((p) => p.id === r.pontoId) ?? null
                 );
@@ -58,7 +65,7 @@ export default function CadastroDoacao({ route, navigation }: Props) {
 
     useEffect(() => {
         if (!carregado || modoEdicao) return;
-        const vazio = !tipoItem && !quantidade && !pontoDestino;
+        const vazio = !tipoItem && !quantidade && !pontoDestino && !descricao;
         salvarRascunho(
             vazio
                 ? null
@@ -67,31 +74,37 @@ export default function CadastroDoacao({ route, navigation }: Props) {
                     quantidade,
                     pontoDestino,
                     pontoId: pontoSelecionado?.id ?? null,
+                    descricao, 
                 }
         );
-    }, [carregado, tipoItem, quantidade, pontoDestino, pontoSelecionado]);
+    }, [carregado, tipoItem, quantidade, pontoDestino, pontoSelecionado, descricao]); 
 
-    // Faz a mensagem de sucesso sumir sozinha depois de 3 segundos
+    // Faz a mensagem de sucesso sumir sozinha depois de 1 segundos
     useEffect(() => {
         if (mensagemSucesso === '') return;
 
-        const timer = setTimeout(() => setMensagemSucesso(''), 3000);
+        const timer = setTimeout(() => setMensagemSucesso(''), 1000);
         return () => clearTimeout(timer);
     }, [mensagemSucesso]);
 
-    // Validação do tipo do item (não pode ser vazio)
+    // Validação do tipo do item (precisa estar selecionado)
     function validarTipoItem(valor: string) {
         setTipoItem(valor);
 
         if (valor.trim() === '') {
-            setErroTipoItem('Informe o tipo do item.');
+            setErroTipoItem('Selecione o tipo do item.');
             return;
         }
 
         setErroTipoItem('');
     }
 
-    // Validação da quantidade (não de ser vazio e deve ser um número inteiro)
+    function selecionarTipo(tipo: string) {
+        validarTipoItem(tipo);
+        setMostrarTipos(false);
+    }
+
+    // Validação da quantidade (não pode ser vazio e deve ser um número inteiro)
     function validarQuantidade(valor: string) {
         setQuantidade(valor);
 
@@ -108,6 +121,18 @@ export default function CadastroDoacao({ route, navigation }: Props) {
         setErroQuantidade('');
     }
 
+    //Validação da descrição (não pode ser vazia)
+    function validarDescricao(valor: string) {
+        setDescricao(valor);
+
+        if (valor.trim() === '') {
+            setErroDescricao('Informe uma descrição para o item.');
+            return;
+        }
+
+        setErroDescricao('');
+    }
+
     // Validação do ponto de destino (não pode ser vazio e deve ser selecionado da lista)
     function validarPontoDestino() {
         if (pontoSelecionado === null) {
@@ -119,7 +144,6 @@ export default function CadastroDoacao({ route, navigation }: Props) {
         return true;
     }
 
-    // Selecionar um ponto da lista
     function selecionarPonto(ponto: Ponto) {
         setPontoDestino(ponto.nome);
         setPontoSelecionado(ponto);
@@ -144,6 +168,7 @@ export default function CadastroDoacao({ route, navigation }: Props) {
         // As mesmas validações valem para cadastro e edição
         validarTipoItem(tipoItem);
         validarQuantidade(quantidade);
+        validarDescricao(descricao);
 
         const pontoValido = validarPontoDestino();
 
@@ -151,6 +176,7 @@ export default function CadastroDoacao({ route, navigation }: Props) {
             tipoItem.trim() === '' ||
             quantidade.trim() === '' ||
             !/^\d+$/.test(quantidade) ||
+            descricao.trim() === '' ||
             !pontoValido
         ) {
             return;
@@ -163,6 +189,7 @@ export default function CadastroDoacao({ route, navigation }: Props) {
                 tipoItem: tipoItem.trim(),
                 quantidade: quantidade.trim(),
                 pontoDestino: pontoSelecionado!.nome,
+                descricao: descricao.trim(), 
             };
 
             const ok = await atualizarDoacao(atualizada);
@@ -179,6 +206,7 @@ export default function CadastroDoacao({ route, navigation }: Props) {
             tipoItem: tipoItem.trim(),
             quantidade: quantidade.trim(),
             pontoDestino: pontoSelecionado!.nome,
+            descricao: descricao.trim(), 
         });
 
         if (!novaDoacao) return;
@@ -189,11 +217,14 @@ export default function CadastroDoacao({ route, navigation }: Props) {
         setTipoItem('');
         setQuantidade('');
         setPontoDestino('');
+        setDescricao(''); 
         setPontoSelecionado(null);
+        setMostrarTipos(false);
 
         setErroTipoItem('');
         setErroQuantidade('');
         setErroPontoDestino('');
+        setErroDescricao(''); 
     }
 
     return (
@@ -213,29 +244,66 @@ export default function CadastroDoacao({ route, navigation }: Props) {
                         {modoEdicao ? `Editar Doação nº ${doacaoEditando!.id}` : 'Cadastro de Doação'}
                     </Text>
 
+                    {/* Campo tipo doação */}
                     <View style={styles.campo}>
                         <Text style={styles.label}>Tipo do item</Text>
 
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Ex: Roupas, alimentos, brinquedos"
-                            value={tipoItem}
-                            onChangeText={validarTipoItem}
-                        />
+                        <TouchableOpacity
+                            style={styles.seletor}
+                            onPress={() => setMostrarTipos(!mostrarTipos)}
+                        >
+                            <Text style={tipoSelecionado ? styles.seletorTexto : styles.seletorPlaceholder}>
+                                {tipoSelecionado ? tipoItem : 'Selecione o tipo do item'}
+                            </Text>
+                        </TouchableOpacity>
+
+                        {mostrarTipos && (
+                            <View style={styles.listaPontos}>
+                                {tiposItem.map((tipo) => (
+                                    <TouchableOpacity
+                                        key={tipo}
+                                        style={styles.pontoItem}
+                                        onPress={() => selecionarTipo(tipo)}
+                                    >
+                                        <Text style={styles.pontoNome}>{tipo}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        )}
 
                         {erroTipoItem !== '' && (
                             <Text style={styles.erro}>{erroTipoItem}</Text>
                         )}
                     </View>
 
+                    {/* Campo descrição */}
+                    <View style={styles.campo}>
+                        <Text style={styles.label}>Descrição</Text>
+
+                        <TextInput
+                            style={[styles.input, !tipoSelecionado && styles.inputDesabilitado]}
+                            placeholder="Descreva o que está sendo doado"
+                            value={descricao}
+                            editable={tipoSelecionado}
+                            onChangeText={validarDescricao}
+                            multiline
+                        />
+
+                        {erroDescricao !== '' && (
+                            <Text style={styles.erro}>{erroDescricao}</Text>
+                        )}
+                    </View>
+
+                    {/* Campo quantidade */}
                     <View style={styles.campo}>
                         <Text style={styles.label}>Quantidade</Text>
 
                         <TextInput
-                            style={styles.input}
+                            style={[styles.input, !tipoSelecionado && styles.inputDesabilitado]}
                             placeholder="Apenas números inteiros"
                             keyboardType="numeric"
                             value={quantidade}
+                            editable={tipoSelecionado}
                             onChangeText={validarQuantidade}
                         />
 
@@ -244,13 +312,15 @@ export default function CadastroDoacao({ route, navigation }: Props) {
                         )}
                     </View>
 
+                    {/* Campo ponto de destino */}
                     <View style={styles.campo}>
                         <Text style={styles.label}>Ponto de destino</Text>
 
                         <TextInput
-                            style={styles.input}
-                            placeholder="Digite para buscar um ponto"
+                            style={[styles.input, !tipoSelecionado && styles.inputDesabilitado]}
+                            placeholder="Selecione um ponto de doação"
                             value={pontoDestino}
+                            editable={tipoSelecionado}
                             onFocus={() => setMostrarPontos(true)}
                             onChangeText={(texto) => {
                                 setPontoDestino(texto);
@@ -354,6 +424,37 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         paddingVertical: 10,
         fontSize: 16,
+    },
+
+    inputDesabilitado: {
+        backgroundColor: '#eee',
+        color: '#999',
+    },
+
+    seletor: {
+        borderWidth: 1,
+        borderColor: '#ccc',
+        borderRadius: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        minHeight: 44,
+        justifyContent: 'center',
+    },
+
+    seletorTexto: {
+        fontSize: 16,
+        color: '#000',
+    },
+
+    seletorPlaceholder: {
+        fontSize: 16,
+        color: '#999',
+    },
+
+    dica: {
+        fontSize: 13,
+        color: '#666',
+        marginBottom: 12,
     },
 
     erro: {

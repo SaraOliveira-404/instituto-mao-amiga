@@ -12,6 +12,7 @@ export type Doacao = {
   quantidade: string;
   pontoDestino: string;
   criadoEm: string;
+  descricao: string;
 };
 
 export type RootStackParamList = {

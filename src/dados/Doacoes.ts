@@ -10,6 +10,7 @@ export type Rascunho = {
   quantidade: string;
   pontoDestino: string;
   pontoId: string | null;
+  descricao?: string;
 };
 
 type NovaDoacao = Omit<Doacao, 'id' | 'criadoEm'>;
