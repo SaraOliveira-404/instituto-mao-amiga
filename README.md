@@ -70,7 +70,41 @@ Funciona no celular pela rede local e pelo navegador
 
 ## N2-5 · API de doações
 
-_(pendente)_ Prints do Swagger de cada endpoint, incluindo um 400 e um 404.
+### Endpoints
+
+| Método | URL | Respostas |
+|---|---|---|
+| GET | `/api/v1/doacoes/filtro?filtro=...&page=0&size=10` 
+| GET | `/api/v1/doacoes/{id}` 
+| POST | `/api/v1/doacoes` 
+| PUT | `/api/v1/doacoes/{id}` 
+| DELETE | `/api/v1/doacoes/{id}` 
+
+### Prints do Swagger
+
+**GET /api/v1/doacoes/filtro → 200**
+![GET filtro 200](prints/[N2-5]/GETfiltro_200.png)
+
+**GET /api/v1/doacoes/{id} → 200**
+![GET id 200](prints/[N2-5]/GETid_200.png)
+
+**GET /api/v1/doacoes/{id} → 404**
+![GET id 404](prints/[N2-5]/GETid_404.png)
+
+**POST /api/v1/doacoes → 201**
+![POST 201](prints/[N2-5]/POST_201.png)
+
+**POST /api/v1/doacoes → 400 (quantidade zero)**
+![POST 400](prints/[N2-5]/POST_400.png)
+
+**PUT /api/v1/doacoes/{id} → 200**
+![PUT 200](prints/[N2-5]/PUT_200.png)
+
+**PUT /api/v1/doacoes/{id} → 404**
+![PUT 404](prints/[N2-5]/PUT_404.png)
+
+**DELETE /api/v1/doacoes/{id} → 204**
+![DELETE 204](prints/[N2-5]/DELETE_204.png)
 
 ---
 
