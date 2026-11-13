@@ -10,6 +10,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 @Service
 @RequiredArgsConstructor 
@@ -23,6 +25,11 @@ public class PontoService {
 
     public PontoResponseDTO buscar(UUID id) {
         return PontoResponseDTO.from(buscarEntidade(id));
+    }
+
+    public Page<PontoResponseDTO> filtrar(String filtro, Pageable pageable) {
+        String texto = filtro == null ? "" : filtro.trim();
+        return repository.buscarPorFiltro(texto, pageable).map(PontoResponseDTO::from);
     }
 
     public PontoResponseDTO cadastrar(PontoRequestDTO dto) {

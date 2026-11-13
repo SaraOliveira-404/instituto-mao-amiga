@@ -55,12 +55,10 @@ Swagger: http://localhost:8081/swagger-ui/index.html
 
 ## N2-2 · Busca de pontos com paginação
 
-_(pendente)_
-
 Chamadas e respostas:
-1. Sem filtro
-2. Filtrando por bairro
-3. Segunda página
+1. Sem filtro: http://localhost:8081/api/v1/pontos/filtro?page=0&size=10
+2. Filtrando por bairro: http://localhost:8081/api/v1/pontos/filtro?page=0&size=10&sort=bairro,asc
+3. Segunda página: http://localhost:8081/api/v1/pontos/filtro?page=1&size=10
 
 ---
 

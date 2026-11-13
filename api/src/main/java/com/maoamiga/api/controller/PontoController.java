@@ -9,6 +9,9 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 
 @RestController
 @RequestMapping("/api/v1/pontos") 
@@ -28,6 +31,14 @@ public class PontoController {
     @GetMapping("/{id}")
     public PontoResponseDTO buscar(@PathVariable UUID id) {
         return service.buscar(id);
+    }
+
+    // GET /api/v1/pontos/filtro?filtro=vila&page=0&size=10&sort=bairro,asc
+    @GetMapping("/filtro")
+    public Page<PontoResponseDTO> filtrar(
+            @RequestParam(defaultValue = "") String filtro,
+            @PageableDefault(size = 10, sort = "nome") Pageable pageable) {
+        return service.filtrar(filtro, pageable);
     }
 
     // POST /api/v1/pontos  -> 201, ou 400 se faltar campo (@Valid)
