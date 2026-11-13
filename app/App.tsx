@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import ListaPontos from './src/telas/ListaPontos';
 import DetalhePonto from './src/telas/DetalhePonto';
+import CadastroPonto from './src/telas/CadastroPonto'; 
 import CadastroDoacao from './src/telas/CadastroDoacao';
 import MinhasDoacoes from './src/telas/MinhasDoacoes';
 import DetalheDoacao from './src/telas/DetalheDoacao';
@@ -26,6 +27,15 @@ export default function App() {
             name="DetalhePonto"
             component={DetalhePonto}
             options={{ title: 'Detalhes do Ponto' }}
+          />
+
+          {/* Issue #21 (N2-4): a mesma tela serve para cadastrar e editar pontos. */}
+          <Stack.Screen
+            name="CadastroPonto"
+            component={CadastroPonto}
+            options={({ route }) => ({
+              title: route.params?.ponto ? 'Editar Ponto' : 'Cadastrar Ponto',
+            })}
           />
 
           {/* Issue #11: a mesma tela serve para cadastrar e editar. */}

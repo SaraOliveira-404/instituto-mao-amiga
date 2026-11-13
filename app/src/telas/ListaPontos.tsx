@@ -14,7 +14,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../tipos/navegacao';
 import type { Ponto } from '../tipos/ponto';
 import type { Doacao } from '../tipos/doacao';
-import { buscarPagina } from '../services/pontosService'; //NOVO: nome do arquivo mudou e agora tem busca com filtro
+import { buscarPagina, consumirAlteracao } from '../services/pontosService';
 import { listarDoacoes } from '../services/doacaoStorage';
 import { ResumoDoacoes } from '../componentes/ResumoDoacoes';
 
@@ -25,7 +25,6 @@ function PontoItem({ ponto, onPress }: { ponto: Ponto; onPress: () => void }) {
   return (
     <TouchableOpacity style={styles.item} onPress={onPress}>
       <Text style={styles.itemNome}>{ponto.nome}</Text>
-      {/* NOVO: mostra bairro e tipo (campos novos da API) */}
       <Text style={styles.itemInfo}>
         {ponto.bairro} · {ponto.tipo}
       </Text>
@@ -49,13 +48,7 @@ function ListaPontos({ navigation }: Props) {
 
   const carregandoRef = useRef(false);
   const versaoBusca = useRef(0);
-
-  //Roda toda vez que a tela volta a ficar visível
-  useFocusEffect(
-    useCallback(() => {
-      listarDoacoes().then(setDoacoes);
-    }, [])
-  );
+  const filtroAtual = useRef(''); // guarda o filtro atual para recarregar a lista sem perder a busca
 
   //Carrega uma página da API (com o filtro atual); se falhar (API desligada) mostra mensagem
   const carregarPagina = useCallback(async (numero: number, texto: string) => {
@@ -90,6 +83,14 @@ function ListaPontos({ navigation }: Props) {
     }
   }, []);
 
+  //Roda toda vez que a tela volta a ficar visível
+  useFocusEffect(
+    useCallback(() => {
+      listarDoacoes().then(setDoacoes);
+      if (consumirAlteracao()) carregarPagina(0, filtroAtual.current);
+    }, [carregarPagina])
+  );
+
   //Espera a pessoa parar de digitar por 400 ms antes de buscar (evita uma chamada por letra)
   useEffect(() => {
     const timer = setTimeout(() => setFiltro(busca.trim()), 400);
@@ -98,6 +99,7 @@ function ListaPontos({ navigation }: Props) {
 
   //Sempre que o filtro muda (e na primeira abertura), volta para a primeira página
   useEffect(() => {
+    filtroAtual.current = filtro;
     carregarPagina(0, filtro);
   }, [filtro, carregarPagina]);
 
@@ -124,6 +126,14 @@ function ListaPontos({ navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
+      {/* (N2-4): abre o formulário de ponto vazio (modo cadastro) */}
+      <TouchableOpacity
+        style={styles.botaoPonto}
+        onPress={() => navigation.navigate('CadastroPonto')}
+      >
+        <Text style={styles.botaoCadastroTexto}>+ Cadastrar Ponto</Text>
+      </TouchableOpacity>
+
       <TouchableOpacity
         style={styles.botaoCadastro}
         onPress={() => navigation.navigate('CadastroDoacao')}
@@ -197,7 +207,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   itemNome: { fontSize: 16, fontWeight: 'bold' },
-  itemInfo: { fontSize: 13, color: '#666', marginTop: 2 }, //NOVO
+  itemInfo: { fontSize: 13, color: '#666', marginTop: 2 },
   busca: {
     borderWidth: 1,
     borderColor: '#ccc',
@@ -206,6 +216,15 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 16,
     marginBottom: 12,
+  },
+  botaoPonto: {
+    backgroundColor: '#00796b',
+    borderRadius: 8,
+    padding: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+    minHeight: 44,
   },
   botaoCadastro: {
     backgroundColor: '#2e7d32',

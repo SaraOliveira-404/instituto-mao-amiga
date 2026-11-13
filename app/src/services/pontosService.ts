@@ -1,6 +1,15 @@
 import { get, post, put, del, ApiError } from './api';
 import type { Ponto, PontoDados, PaginaPontos } from '../tipos/ponto';
 
+//Marca que algum ponto mudou (cadastro, edição ou exclusão). A lista consulta isso ao voltar para recarregar
+let houveAlteracao = false;
+
+//Devolve true se houve alteração e já zera a marca (cada alteração recarrega a lista uma única vez)
+export function consumirAlteracao(): boolean {
+  const resultado = houveAlteracao;
+  houveAlteracao = false;
+  return resultado;
+}
 
 export function listar(): Promise<Ponto[]> {
   return get<Ponto[]>('/pontos');
@@ -21,14 +30,19 @@ export async function buscarPorId(id: string): Promise<Ponto | null> {
   }
 }
 
-export function cadastrar(dados: PontoDados): Promise<Ponto> {
-  return post<Ponto>('/pontos', dados);
+export async function cadastrar(dados: PontoDados): Promise<Ponto> {
+  const novo = await post<Ponto>('/pontos', dados);
+  houveAlteracao = true;
+  return novo;
 }
 
-export function editar(id: string, dados: PontoDados): Promise<Ponto> {
-  return put<Ponto>(`/pontos/${id}`, dados);
+export async function editar(id: string, dados: PontoDados): Promise<Ponto> {
+  const editado = await put<Ponto>(`/pontos/${id}`, dados);
+  houveAlteracao = true; //NOVO
+  return editado;
 }
 
-export function excluir(id: string): Promise<void> {
-  return del(`/pontos/${id}`);
+export async function excluir(id: string): Promise<void> {
+  await del(`/pontos/${id}`);
+  houveAlteracao = true; 
 }

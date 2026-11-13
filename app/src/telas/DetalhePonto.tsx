@@ -1,11 +1,20 @@
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, View, StyleSheet } from 'react-native';
+import { useCallback, useState, useEffect } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+  StyleSheet,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native'; 
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../tipos/navegacao';
 import type { Ponto } from '../tipos/ponto';
 import type { Doacao } from '../tipos/doacao';
-import { buscarPorId } from '../services/pontosService';
+import { buscarPorId, excluir } from '../services/pontosService'; 
 import { listarDoacoesPorPonto } from '../services/doacaoStorage';
 import { ItemDoacao } from '../componentes/ItemDoacao';
 import { ResumoDoacoes } from '../componentes/ResumoDoacoes';
@@ -13,12 +22,39 @@ import { ResumoDoacoes } from '../componentes/ResumoDoacoes';
 type Props = NativeStackScreenProps<RootStackParamList, 'DetalhePonto'>;
 
 // Mostra os dados do ponto, o resumo e as doações recentes destinadas a ele
-function PontoDetalhe({ ponto }: { ponto: Ponto }) {
+function PontoDetalhe({ ponto, navigation }: { ponto: Ponto; navigation: Props['navigation'] }) {
   const [doacoes, setDoacoes] = useState<Doacao[]>([]);
 
   useEffect(() => {
     listarDoacoesPorPonto(ponto.nome).then(setDoacoes);
   }, [ponto.nome]);
+
+  // pede confirmação (Cancelar / Excluir) e só então envia o DELETE
+  function confirmarExclusao() {
+    Alert.alert(
+      'Excluir ponto',
+      `Tem certeza que deseja excluir "${ponto.nome}"? Essa ação não pode ser desfeita.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Excluir',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await excluir(ponto.id);
+              navigation.goBack(); // a lista recarrega sozinha e o ponto some
+            } catch {
+              // Não finge que deu certo: continua na tela e avisa
+              Alert.alert(
+                'Erro',
+                'Não foi possível excluir o ponto. Verifique se a API está ligada e tente novamente.'
+              );
+            }
+          },
+        },
+      ]
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
@@ -28,6 +64,17 @@ function PontoDetalhe({ ponto }: { ponto: Ponto }) {
         <Text style={styles.campo}>Bairro: {ponto.bairro}</Text>
         <Text style={styles.campo}>Horário: {ponto.horario}</Text>
         <Text style={styles.campo}>Tipo: {ponto.tipo}</Text>
+
+        <TouchableOpacity
+          style={styles.botaoEditar}
+          onPress={() => navigation.navigate('CadastroPonto', { ponto })}
+        >
+          <Text style={styles.botaoTexto}>Editar ponto</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.botaoExcluir} onPress={confirmarExclusao}>
+          <Text style={styles.botaoTexto}>Excluir ponto</Text>
+        </TouchableOpacity>
 
         <View style={styles.secaoResumo}>
           <ResumoDoacoes doacoes={doacoes} titulo="Resumo deste ponto" />
@@ -47,37 +94,38 @@ function PontoDetalhe({ ponto }: { ponto: Ponto }) {
   );
 }
 
-//NOVO: os 4 estados possíveis da busca na API
+//Os 4 estados possíveis da busca na API
 type Estado = 'carregando' | 'ok' | 'naoEncontrado' | 'erro';
 
-function DetalhePonto({ route }: Props) {
+function DetalhePonto({ route, navigation }: Props) {
   const { pontoId } = route.params;
   const [ponto, setPonto] = useState<Ponto | null>(null);
   const [estado, setEstado] = useState<Estado>('carregando');
 
   //busca o ponto por id na API (404 => "ponto não encontrado")
-  useEffect(() => {
-    let ativo = true;
-    setEstado('carregando');
+  useFocusEffect(
+    useCallback(() => {
+      let ativo = true;
 
-    buscarPorId(pontoId)
-      .then((encontrado) => {
-        if (!ativo) return;
-        if (encontrado === null) {
-          setEstado('naoEncontrado');
-        } else {
-          setPonto(encontrado);
-          setEstado('ok');
-        }
-      })
-      .catch(() => {
-        if (ativo) setEstado('erro');
-      });
+      buscarPorId(pontoId)
+        .then((encontrado) => {
+          if (!ativo) return;
+          if (encontrado === null) {
+            setEstado('naoEncontrado');
+          } else {
+            setPonto(encontrado);
+            setEstado('ok');
+          }
+        })
+        .catch(() => {
+          if (ativo) setEstado('erro');
+        });
 
-    return () => {
-      ativo = false;
-    };
-  }, [pontoId]);
+      return () => {
+        ativo = false;
+      };
+    }, [pontoId])
+  );
 
   if (estado === 'carregando') return <ActivityIndicator style={styles.centro} />;
   if (estado === 'naoEncontrado') return <Text style={styles.mensagem}>Ponto não encontrado.</Text>;
@@ -89,7 +137,7 @@ function DetalhePonto({ route }: Props) {
     );
   }
 
-  return <PontoDetalhe ponto={ponto} />;
+  return <PontoDetalhe ponto={ponto} navigation={navigation} />;
 }
 
 export default DetalhePonto;
@@ -99,6 +147,25 @@ const styles = StyleSheet.create({
   scrollContent: { padding: 20 },
   nome: { fontSize: 22, fontWeight: 'bold', color: '#1B3A5C', marginBottom: 12 },
   campo: { fontSize: 16, marginTop: 6, color: '#333333' },
+  botaoEditar: {
+    backgroundColor: '#1B3A5C',
+    borderRadius: 8,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 24,
+    minHeight: 44,
+  },
+  botaoExcluir: {
+    backgroundColor: '#d32f2f',
+    borderRadius: 8,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+    minHeight: 44,
+  },
+  botaoTexto: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
   secaoResumo: { marginTop: 24 },
   secaoDoacoes: { marginTop: 8 },
   secaoTitulo: { fontSize: 16, fontWeight: 'bold', color: '#1B3A5C', marginBottom: 8 },
