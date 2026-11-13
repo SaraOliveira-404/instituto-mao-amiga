@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Alert, ScrollView, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../tipos/navegacao'; //NOVO: caminho da nova estrutura
+import type { RootStackParamList } from '../tipos/navegacao'; 
 import { excluirDoacao } from '../services/doacaoStorage';
 import { formatarData } from '../utilitarios/formatarData';
 

@@ -21,7 +21,7 @@ function calcularTotais(doacoes: Doacao[]): TotalTipo[] {
 
   for (const d of doacoes) {
     const atual = porTipo[d.tipoItem] ?? { tipo: d.tipoItem, quantidade: 0, doacoes: 0 };
-    atual.quantidade += d.quantidade; //NOVO: quantidade já é número
+    atual.quantidade += d.quantidade; 
     atual.doacoes += 1;
     porTipo[d.tipoItem] = atual;
   }

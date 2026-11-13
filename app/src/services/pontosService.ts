@@ -38,7 +38,7 @@ export async function cadastrar(dados: PontoDados): Promise<Ponto> {
 
 export async function editar(id: string, dados: PontoDados): Promise<Ponto> {
   const editado = await put<Ponto>(`/pontos/${id}`, dados);
-  houveAlteracao = true; //NOVO
+  houveAlteracao = true; 
   return editado;
 }
 

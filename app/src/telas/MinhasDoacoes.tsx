@@ -14,7 +14,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-//NOVO: tipos agora ficam em src/tipos/
 import type { RootStackParamList } from '../tipos/navegacao';
 import type { Doacao } from '../tipos/doacao';
 import { listarDoacoes } from '../services/doacaoStorage';

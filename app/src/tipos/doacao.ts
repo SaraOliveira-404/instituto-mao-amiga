@@ -1,4 +1,4 @@
-// NOVO: tipo da doação (antes ficava em tipos.ts). Agora quantidade é número.
+// tipo da doação (antes ficava em tipos.ts). Agora quantidade é número.
 export type Doacao = {
   id: string;
   tipoItem: string;

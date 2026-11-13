@@ -28,7 +28,7 @@ export default function CadastroDoacao({ route, navigation }: Props) {
 
     // Campos do formulário. Issue #11: na edição já começam preenchidos com os dados da doação.
     const [tipoItem, setTipoItem] = useState(doacaoEditando?.tipoItem ?? '');
-    const [quantidade, setQuantidade] = useState(doacaoEditando ? String(doacaoEditando.quantidade) : '') //NOVO: quantidade é número, o campo de texto usa string;
+    const [quantidade, setQuantidade] = useState(doacaoEditando ? String(doacaoEditando.quantidade) : '') 
     const [pontoDestino, setPontoDestino] = useState(doacaoEditando?.pontoDestino ?? '');
     const [descricao, setDescricao] = useState(doacaoEditando?.descricao ?? '');
 
@@ -40,7 +40,7 @@ export default function CadastroDoacao({ route, navigation }: Props) {
 
     // Ponto escolhido na lista 
     const [pontoSelecionado, setPontoSelecionado] = useState<Ponto | null>(null);
-    //NOVO: lista de pontos vinda da API e mensagem de erro caso ela esteja fora do ar
+    // lista de pontos vinda da API e mensagem de erro caso ela esteja fora do ar
     const [pontos, setPontos] = useState<Ponto[]>([]);
     const [erroPontos, setErroPontos] = useState('');
     const [mostrarPontos, setMostrarPontos] = useState(false);
@@ -91,7 +91,6 @@ export default function CadastroDoacao({ route, navigation }: Props) {
         return () => clearTimeout(timer);
     }, [mensagemSucesso]);
 
-    //NOVO: busca os pontos na API ao abrir a tela
     const carregarPontos = useCallback(async () => {
         setErroPontos('');
         try {
@@ -105,7 +104,6 @@ export default function CadastroDoacao({ route, navigation }: Props) {
         carregarPontos();
     }, [carregarPontos]);
 
-    //NOVO: depois que os pontos chegam, marca como selecionado o ponto da edição/rascunho (comparando pelo nome)
     useEffect(() => {
         if (pontos.length === 0 || pontoSelecionado !== null) return;
         const achado = pontos.find((p) => p.nome === pontoDestino);
@@ -178,7 +176,7 @@ export default function CadastroDoacao({ route, navigation }: Props) {
     }
 
     // Lista de pontos para escolher
-    const pontosFiltrados = [...pontos] //NOVO: antes usava o array fixo
+    const pontosFiltrados = [...pontos] 
         .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
         .filter((ponto) =>
             ponto.nome
@@ -216,7 +214,7 @@ export default function CadastroDoacao({ route, navigation }: Props) {
             const atualizada: Doacao = {
                 ...doacaoEditando,
                 tipoItem: tipoItem.trim(),
-                quantidade: Number(quantidade.trim()), //NOVO: salva como número
+                quantidade: Number(quantidade.trim()), 
                 pontoDestino: pontoSelecionado!.nome,
                 descricao: descricao.trim(),
             };
@@ -233,7 +231,7 @@ export default function CadastroDoacao({ route, navigation }: Props) {
         // Salva o cadastro novo
         const novaDoacao = await salvarDoacao({
             tipoItem: tipoItem.trim(),
-            quantidade: Number(quantidade.trim()), //NOVO: salva como número
+            quantidade: Number(quantidade.trim()), 
             pontoDestino: pontoSelecionado!.nome,
             descricao: descricao.trim(),
         });
@@ -375,7 +373,6 @@ export default function CadastroDoacao({ route, navigation }: Props) {
                             </View>
                         )}
 
-                        {/* NOVO: mensagem de erro quando a API está fora do ar */}
                         {erroPontos !== '' && (
                             <Text style={styles.erro}>{erroPontos}</Text>
                         )}

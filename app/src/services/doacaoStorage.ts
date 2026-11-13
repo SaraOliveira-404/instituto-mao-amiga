@@ -15,7 +15,6 @@ export type Rascunho = {
 };
 
 type NovaDoacao = Omit<Doacao, 'id' | 'criadoEm'>;
-//NOVO: formato que pode estar salvo no aparelho (quantidade antiga = texto)
 type DoacaoSalva = Omit<Doacao, 'quantidade'> & { quantidade: number | string };
 
 // Issue #08: gera um id único e sequencial
@@ -31,7 +30,6 @@ export async function listarDoacoes(): Promise<Doacao[]> {
   try {
     const salvo = await AsyncStorage.getItem(STORAGE_KEY);
     const bruto = salvo ? (JSON.parse(salvo) as DoacaoSalva[]) : [];
-    //NOVO: doações antigas guardavam a quantidade como texto; aqui viram número
     const todas: Doacao[] = bruto.map((d) => ({ ...d, quantidade: Number(d.quantidade) || 0 }));
     return todas.sort(
       (a, b) => new Date(b.criadoEm).getTime() - new Date(a.criadoEm).getTime()

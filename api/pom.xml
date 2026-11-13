@@ -35,18 +35,15 @@
       <scope>runtime</scope>
     </dependency>
 
-    <!-- NOVO: validação (@NotBlank, @Valid) -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-validation</artifactId>
     </dependency>
-    <!-- NOVO: Lombok gera getters, setters e construtores -->
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
       <optional>true</optional>
     </dependency>
-    <!-- NOVO: Swagger (documentação e testes em /swagger-ui/index.html) -->
     <dependency>
       <groupId>org.springdoc</groupId>
       <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
@@ -59,7 +56,6 @@
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
-        <!-- NOVO: o Lombok não deve ir dentro do jar final -->
         <configuration>
           <excludes>
             <exclude>
