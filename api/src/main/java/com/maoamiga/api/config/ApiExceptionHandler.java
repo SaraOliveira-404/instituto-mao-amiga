@@ -1,4 +1,4 @@
-package com.maoamiga.api;
+package com.maoamiga.api.config; 
 
 import org.springframework.data.mapping.PropertyReferenceException;
 import org.springframework.http.HttpStatus;

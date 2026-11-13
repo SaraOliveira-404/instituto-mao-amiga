@@ -1,0 +1,4 @@
+api/target/
+api/data/
+node_modules/
+.expo/
