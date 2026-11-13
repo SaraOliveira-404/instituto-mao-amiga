@@ -14,7 +14,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../tipos/navegacao';
 import type { Doacao } from '../tipos/doacao';
 import type { Ponto } from '../tipos/ponto';
-import { listarTodosPontos } from '../services/pontoService'; //NOVO: pontos vêm da API
+import { listar as listarTodosPontos } from '../services/pontosService'; 
 import { tiposItem } from '../dados/TiposItem';
 import { salvarDoacao, atualizarDoacao, carregarRascunho, salvarRascunho } from '../services/doacaoStorage';
 

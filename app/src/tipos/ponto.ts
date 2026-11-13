@@ -1,15 +1,14 @@
-// NOVO: espelha, campo a campo, o record PontoResponse da API (api/.../PontoResponse.java)
 export type Ponto = {
-  id: number;
+  id: string; 
   nome: string;
   endereco: string;
+  bairro: string; 
   horario: string;
-  recebeOuDistribui: string;
-  latitude: number;
-  longitude: number;
+  tipo: string; 
 };
 
-// NOVO: formato da página que a API devolve em GET /pontos (Page do Spring: content + page)
+export type PontoDados = Omit<Ponto, 'id'>;
+
 export type PaginaPontos = {
   content: Ponto[];
   page: {

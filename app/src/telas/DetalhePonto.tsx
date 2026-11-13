@@ -5,7 +5,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../tipos/navegacao';
 import type { Ponto } from '../tipos/ponto';
 import type { Doacao } from '../tipos/doacao';
-import { buscarPontoPorId } from '../services/pontoService'; //NOVO: busca o ponto na API
+import { buscarPorId } from '../services/pontosService';
 import { listarDoacoesPorPonto } from '../services/doacaoStorage';
 import { ItemDoacao } from '../componentes/ItemDoacao';
 import { ResumoDoacoes } from '../componentes/ResumoDoacoes';
@@ -25,8 +25,9 @@ function PontoDetalhe({ ponto }: { ponto: Ponto }) {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={styles.nome}>{ponto.nome}</Text>
         <Text style={styles.campo}>Endereço: {ponto.endereco}</Text>
+        <Text style={styles.campo}>Bairro: {ponto.bairro}</Text>
         <Text style={styles.campo}>Horário: {ponto.horario}</Text>
-        <Text style={styles.campo}>{ponto.recebeOuDistribui}</Text>
+        <Text style={styles.campo}>Tipo: {ponto.tipo}</Text>
 
         <View style={styles.secaoResumo}>
           <ResumoDoacoes doacoes={doacoes} titulo="Resumo deste ponto" />
@@ -54,12 +55,12 @@ function DetalhePonto({ route }: Props) {
   const [ponto, setPonto] = useState<Ponto | null>(null);
   const [estado, setEstado] = useState<Estado>('carregando');
 
-  //NOVO: busca o ponto por id na API (404 => "ponto não encontrado")
+  //busca o ponto por id na API (404 => "ponto não encontrado")
   useEffect(() => {
     let ativo = true;
     setEstado('carregando');
 
-    buscarPontoPorId(pontoId)
+    buscarPorId(pontoId)
       .then((encontrado) => {
         if (!ativo) return;
         if (encontrado === null) {

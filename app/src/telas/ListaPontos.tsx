@@ -1,12 +1,20 @@
-import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Text, TouchableOpacity, FlatList, View, StyleSheet } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  FlatList,
+  View,
+  StyleSheet,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../tipos/navegacao';
 import type { Ponto } from '../tipos/ponto';
 import type { Doacao } from '../tipos/doacao';
-import { listarPontos } from '../services/pontoService'; //NOVO: pontos vêm da API (o array fixo saiu)
+import { buscarPagina } from '../services/pontosService'; //NOVO: nome do arquivo mudou e agora tem busca com filtro
 import { listarDoacoes } from '../services/doacaoStorage';
 import { ResumoDoacoes } from '../componentes/ResumoDoacoes';
 
@@ -17,20 +25,30 @@ function PontoItem({ ponto, onPress }: { ponto: Ponto; onPress: () => void }) {
   return (
     <TouchableOpacity style={styles.item} onPress={onPress}>
       <Text style={styles.itemNome}>{ponto.nome}</Text>
+      {/* NOVO: mostra bairro e tipo (campos novos da API) */}
+      <Text style={styles.itemInfo}>
+        {ponto.bairro} · {ponto.tipo}
+      </Text>
     </TouchableOpacity>
   );
 }
 
-// TELA INICIAL: botões de atalho, resumo geral e lista de pontos
+// Botões de atalho, busca, resumo geral e lista de pontos
 function ListaPontos({ navigation }: Props) {
   const [doacoes, setDoacoes] = useState<Doacao[]>([]); // alimenta o resumo geral
 
-  //NOVO: estado da lista vinda da API (paginada)
   const [pontos, setPontos] = useState<Ponto[]>([]);
   const [paginaAtual, setPaginaAtual] = useState(0);
   const [totalPaginas, setTotalPaginas] = useState(0);
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState('');
+
+  //"busca" é o que a pessoa digita; "filtro" é o texto já enviado à API (depois de 400 ms parado)
+  const [busca, setBusca] = useState('');
+  const [filtro, setFiltro] = useState('');
+
+  const carregandoRef = useRef(false);
+  const versaoBusca = useRef(0);
 
   //Roda toda vez que a tela volta a ficar visível
   useFocusEffect(
@@ -39,38 +57,68 @@ function ListaPontos({ navigation }: Props) {
     }, [])
   );
 
-  //NOVO: carrega uma página da API; se falhar (API desligada) mostra mensagem em vez de travar
-  const carregarPagina = useCallback(async (numero: number) => {
+  //Carrega uma página da API (com o filtro atual); se falhar (API desligada) mostra mensagem
+  const carregarPagina = useCallback(async (numero: number, texto: string) => {
+    // Página 0 = busca nova: zera a lista e invalida qualquer resposta que ainda esteja a caminho
+    if (numero === 0) {
+      versaoBusca.current += 1;
+      setPontos([]);
+      setPaginaAtual(0);
+      setTotalPaginas(0);
+    }
+    const versao = versaoBusca.current;
+
+    carregandoRef.current = true;
     setCarregando(true);
     setErro('');
     try {
-      const resposta = await listarPontos(numero);
+      const resposta = await buscarPagina(numero, texto);
+      if (versao !== versaoBusca.current) return; // resposta de uma busca antiga: ignora
       setPontos((anteriores) =>
         numero === 0 ? resposta.content : [...anteriores, ...resposta.content]
       );
       setPaginaAtual(resposta.page.number);
       setTotalPaginas(resposta.page.totalPages);
     } catch {
+      if (versao !== versaoBusca.current) return;
       setErro('Não foi possível carregar os pontos. Verifique se a API está ligada.');
     } finally {
-      setCarregando(false);
+      if (versao === versaoBusca.current) {
+        carregandoRef.current = false;
+        setCarregando(false);
+      }
     }
   }, []);
 
+  //Espera a pessoa parar de digitar por 400 ms antes de buscar (evita uma chamada por letra)
   useEffect(() => {
-    carregarPagina(0);
-  }, [carregarPagina]);
+    const timer = setTimeout(() => setFiltro(busca.trim()), 400);
+    return () => clearTimeout(timer);
+  }, [busca]);
 
-  //NOVO: ao chegar no fim da lista, pede a próxima página
+  //Sempre que o filtro muda (e na primeira abertura), volta para a primeira página
+  useEffect(() => {
+    carregarPagina(0, filtro);
+  }, [filtro, carregarPagina]);
+
+  //Ao chegar no fim da lista, pede a próxima página (nunca repetida e para na última)
   function carregarMais() {
-    if (carregando || erro !== '' || paginaAtual + 1 >= totalPaginas) return;
-    carregarPagina(paginaAtual + 1);
+    if (carregandoRef.current || erro !== '' || paginaAtual + 1 >= totalPaginas) return;
+    carregarPagina(paginaAtual + 1, filtro);
   }
 
-  //NOVO: mensagem de erro quando a API está fora do ar
+  //Botão "Tentar novamente" do erro: repete a página que falhou
+  function tentarNovamente() {
+    carregarPagina(pontos.length === 0 ? 0 : paginaAtual + 1, filtro);
+  }
+
+  //Mensagem de erro quando a API está fora do ar
   const blocoErro = (
     <View style={styles.erroBox}>
       <Text style={styles.erroTexto}>{erro}</Text>
+      <TouchableOpacity style={styles.botaoTentar} onPress={tentarNovamente}>
+        <Text style={styles.botaoCadastroTexto}>Tentar novamente</Text>
+      </TouchableOpacity>
     </View>
   );
 
@@ -91,9 +139,18 @@ function ListaPontos({ navigation }: Props) {
         <Text style={styles.botaoCadastroTexto}>Minhas Doações</Text>
       </TouchableOpacity>
 
+      {/* Campo de busca (filtra pela API por nome ou bairro) */}
+      <TextInput
+        style={styles.busca}
+        placeholder="Buscar ponto por nome ou bairro"
+        value={busca}
+        onChangeText={setBusca}
+        autoCorrect={false}
+      />
+
       <FlatList
         data={pontos}
-        keyExtractor={(ponto) => String(ponto.id)}
+        keyExtractor={(ponto) => ponto.id}
         // Resumo geral no topo da lista (rola junto com os pontos)
         ListHeaderComponent={<ResumoDoacoes doacoes={doacoes} />}
         renderItem={({ item }) => (
@@ -104,13 +161,18 @@ function ListaPontos({ navigation }: Props) {
         )}
         onEndReached={carregarMais}
         onEndReachedThreshold={0.5}
+        keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
           carregando ? (
             <ActivityIndicator style={styles.carregando} />
           ) : erro !== '' ? (
             blocoErro
           ) : (
-            <Text style={styles.vazio}>Nenhum ponto cadastrado.</Text>
+            <Text style={styles.vazio}>
+              {filtro !== ''
+                ? `Nenhum ponto encontrado para "${filtro}".`
+                : 'Nenhum ponto cadastrado.'}
+            </Text>
           )
         }
         ListFooterComponent={
@@ -135,6 +197,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   itemNome: { fontSize: 16, fontWeight: 'bold' },
+  itemInfo: { fontSize: 13, color: '#666', marginTop: 2 }, //NOVO
+  busca: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+    marginBottom: 12,
+  },
   botaoCadastro: {
     backgroundColor: '#2e7d32',
     borderRadius: 8,
@@ -152,6 +224,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 16,
     minHeight: 44,
+  },
+  botaoTentar: {
+    backgroundColor: '#1B3A5C',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    marginTop: 12,
+    minHeight: 44,
+    justifyContent: 'center',
   },
   botaoCadastroTexto: { color: '#fff', fontWeight: 'bold', fontSize: 15 },
   carregando: { marginVertical: 16 },

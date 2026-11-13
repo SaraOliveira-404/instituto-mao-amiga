@@ -64,7 +64,7 @@ Chamadas e respostas:
 
 ## N2-3 e N2-4 · App com pontos
 
-_(pendente)_ Como o app foi testado: _(celular pela rede local / navegador)_
+Funciona no celular pela rede local e pelo navegador
 
 ---
 
