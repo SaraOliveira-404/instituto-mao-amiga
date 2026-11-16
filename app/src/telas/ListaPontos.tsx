@@ -13,10 +13,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../tipos/navegacao';
 import type { Ponto } from '../tipos/ponto';
-import type { Doacao } from '../tipos/doacao';
 import { buscarPagina, consumirAlteracao } from '../services/pontosService';
-import { listarDoacoes } from '../services/doacaoStorage';
-import { ResumoDoacoes } from '../componentes/ResumoDoacoes';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ListaPontos'>;
 
@@ -32,10 +29,8 @@ function PontoItem({ ponto, onPress }: { ponto: Ponto; onPress: () => void }) {
   );
 }
 
-// Botões de atalho, busca, resumo geral e lista de pontos
+// Botões de atalho, busca e lista de pontos
 function ListaPontos({ navigation }: Props) {
-  const [doacoes, setDoacoes] = useState<Doacao[]>([]); // alimenta o resumo geral
-
   const [pontos, setPontos] = useState<Ponto[]>([]);
   const [paginaAtual, setPaginaAtual] = useState(0);
   const [totalPaginas, setTotalPaginas] = useState(0);
@@ -66,7 +61,7 @@ function ListaPontos({ navigation }: Props) {
     setErro('');
     try {
       const resposta = await buscarPagina(numero, texto);
-      if (versao !== versaoBusca.current) return; // resposta de uma busca antiga: ignora
+      if (versao !== versaoBusca.current) return;
       setPontos((anteriores) =>
         numero === 0 ? resposta.content : [...anteriores, ...resposta.content]
       );
@@ -83,10 +78,9 @@ function ListaPontos({ navigation }: Props) {
     }
   }, []);
 
-  //Roda toda vez que a tela volta a ficar visível
+  //Roda toda vez que a tela volta a ficar visível: se algum ponto mudou, recarrega a lista
   useFocusEffect(
     useCallback(() => {
-      listarDoacoes().then(setDoacoes);
       if (consumirAlteracao()) carregarPagina(0, filtroAtual.current);
     }, [carregarPagina])
   );
@@ -126,7 +120,6 @@ function ListaPontos({ navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
-      {/* (N2-4): abre o formulário de ponto vazio (modo cadastro) */}
       <TouchableOpacity
         style={styles.botaoPonto}
         onPress={() => navigation.navigate('CadastroPonto')}
@@ -161,8 +154,6 @@ function ListaPontos({ navigation }: Props) {
       <FlatList
         data={pontos}
         keyExtractor={(ponto) => ponto.id}
-        // Resumo geral no topo da lista (rola junto com os pontos)
-        ListHeaderComponent={<ResumoDoacoes doacoes={doacoes} />}
         renderItem={({ item }) => (
           <PontoItem
             ponto={item}

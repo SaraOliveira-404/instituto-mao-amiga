@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Text,
   TextInput,
   TouchableOpacity,
@@ -16,7 +17,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../tipos/navegacao';
 import type { Doacao } from '../tipos/doacao';
-import { listarDoacoes } from '../services/doacaoStorage';
+import { buscarPagina, consumirAlteracao } from '../services/doacoesService'; 
 import { tiposItem } from '../dados/TiposItem';
 import { ItemDoacao } from '../componentes/ItemDoacao';
 
@@ -25,29 +26,93 @@ type Props = NativeStackScreenProps<RootStackParamList, 'MinhasDoacoes'>;
 function normalizar(texto: string): string {
   return texto
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') 
+    .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase();
 }
 
-// Issue #09: TELA DE HISTÓRICO (lista todas as doações salvas, com filtro por tipo)
+// TELA DE HISTÓRICO: doações vindas da API (mais novas primeiro), com filtro por tipo e rolagem infinita
 export default function MinhasDoacoes({ navigation, route }: Props) {
-  const [doacoes, setDoacoes] = useState<Doacao[]>([]); 
-  const [carregando, setCarregando] = useState(true);
+  // lista paginada (antes era o array inteiro do AsyncStorage)
+  const [doacoes, setDoacoes] = useState<Doacao[]>([]);
+  const [paginaAtual, setPaginaAtual] = useState(0);
+  const [totalPaginas, setTotalPaginas] = useState(0);
+  const [carregando, setCarregando] = useState(true); // começa true: a primeira página já está a caminho
+  const [erro, setErro] = useState('');
   const [mensagemSucesso, setMensagemSucesso] = useState('');
 
+  // "busca" é o que a pessoa digita; "filtro" é o texto já enviado à API (depois de 400 ms parado)
   const [busca, setBusca] = useState('');
+  const [filtro, setFiltro] = useState('');
   const [mostrarSugestoes, setMostrarSugestoes] = useState(false);
 
+  const carregandoRef = useRef(false);
+  const versaoBusca = useRef(0);
+  const filtroAtual = useRef(''); // guarda o filtro atual para recarregar a lista sem perder a busca
+
+  // carrega uma página da API (com o filtro atual); se falhar (API desligada) mostra mensagem
+  const carregarPagina = useCallback(async (numero: number, texto: string) => {
+    // Página 0 = busca nova: zera a lista e invalida qualquer resposta que ainda esteja a caminho
+    if (numero === 0) {
+      versaoBusca.current += 1;
+      setDoacoes([]);
+      setPaginaAtual(0);
+      setTotalPaginas(0);
+    }
+    const versao = versaoBusca.current;
+
+    carregandoRef.current = true;
+    setCarregando(true);
+    setErro('');
+    try {
+      const resposta = await buscarPagina(numero, texto);
+      if (versao !== versaoBusca.current) return; // resposta de uma busca antiga: ignora
+      setDoacoes((anteriores) =>
+        numero === 0 ? resposta.content : [...anteriores, ...resposta.content]
+      );
+      setPaginaAtual(resposta.page.number);
+      setTotalPaginas(resposta.page.totalPages);
+    } catch {
+      if (versao !== versaoBusca.current) return;
+      setErro('Não foi possível carregar as doações. Verifique se a API está ligada.');
+    } finally {
+      if (versao === versaoBusca.current) {
+        carregandoRef.current = false;
+        setCarregando(false);
+      }
+    }
+  }, []);
+
+  // toda vez que a tela volta a ficar visível, se houve cadastro/edição/exclusão recarrega do topo
   useFocusEffect(
     useCallback(() => {
-      listarDoacoes().then((lista) => {
-        setDoacoes(lista);
-        setCarregando(false);
-      });
-    }, [])
+      if (consumirAlteracao()) carregarPagina(0, filtroAtual.current);
+    }, [carregarPagina])
   );
 
-  // Recebe a mensagem de sucesso enviada por outra tela (ex: "Doação nº 3 excluída")
+  //espera a pessoa parar de digitar por 400 ms antes de buscar (evita uma chamada por letra)
+  useEffect(() => {
+    const timer = setTimeout(() => setFiltro(busca.trim()), 400);
+    return () => clearTimeout(timer);
+  }, [busca]);
+
+  // sempre que o filtro muda (e na primeira abertura), volta para a primeira página
+  useEffect(() => {
+    filtroAtual.current = filtro;
+    carregarPagina(0, filtro);
+  }, [filtro, carregarPagina]);
+
+  // ao chegar no fim da lista pede a próxima página (nunca repetida e para na última)
+  function carregarMais() {
+    if (carregandoRef.current || erro !== '' || paginaAtual + 1 >= totalPaginas) return;
+    carregarPagina(paginaAtual + 1, filtro);
+  }
+
+  //botão "Tentar novamente": repete a página que falhou
+  function tentarNovamente() {
+    carregarPagina(doacoes.length === 0 ? 0 : paginaAtual + 1, filtro);
+  }
+
+  // Recebe a mensagem de sucesso enviada por outra tela (ex: "Doação excluída com sucesso!")
   useEffect(() => {
     const mensagem = route.params?.mensagem;
     if (!mensagem) return;
@@ -64,7 +129,7 @@ export default function MinhasDoacoes({ navigation, route }: Props) {
     return () => clearTimeout(timer);
   }, [mensagemSucesso]);
 
-  // Issue #10: ao tocar num item, abre o detalhe 
+  // Ao tocar num item, abre o detalhe
   const abrirDetalhe = useCallback(
     (doacao: Doacao) => {
       navigation.navigate('DetalheDoacao', { doacao });
@@ -72,15 +137,8 @@ export default function MinhasDoacoes({ navigation, route }: Props) {
     [navigation]
   );
 
-  if (carregando) return null;
-
-  // Issue #12: a lista filtrada
+  // Sugestões de tipo para o campo de filtro
   const termo = normalizar(busca.trim());
-  const doacoesFiltradas =
-    termo === ''
-      ? doacoes 
-      : doacoes.filter((d) => normalizar(d.tipoItem).includes(termo));
-
   const sugestoes = tiposItem.filter((tipo) => normalizar(tipo).includes(termo));
 
   function selecionarSugestao(tipo: string) {
@@ -88,6 +146,16 @@ export default function MinhasDoacoes({ navigation, route }: Props) {
     setMostrarSugestoes(false);
     Keyboard.dismiss();
   }
+
+  //Erro (API desligada) com botão para tentar de novo
+  const blocoErro = (
+    <View style={styles.vazio}>
+      <Text style={styles.erroTexto}>{erro}</Text>
+      <TouchableOpacity style={styles.botaoTentar} onPress={tentarNovamente}>
+        <Text style={styles.botaoTexto}>Tentar novamente</Text>
+      </TouchableOpacity>
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
@@ -99,25 +167,24 @@ export default function MinhasDoacoes({ navigation, route }: Props) {
           <Text style={styles.sucesso}>{mensagemSucesso}</Text>
         )}
 
-        {doacoes.length > 0 && (
-          <TextInput
-            style={styles.busca}
-            placeholder="Filtrar por tipo de item (ex: roupa)"
-            value={busca}
-            onChangeText={(texto) => {
-              setBusca(texto);
-              setMostrarSugestoes(true); 
-            }}
-            onFocus={() => setMostrarSugestoes(true)} 
-            onBlur={() => setMostrarSugestoes(false)} 
-            autoCorrect={false}
-          />
-        )}
+        {/* Filtro por tipo de item: quem filtra agora é a API */}
+        <TextInput
+          style={styles.busca}
+          placeholder="Filtrar por tipo de item (ex: roupa)"
+          value={busca}
+          onChangeText={(texto) => {
+            setBusca(texto);
+            setMostrarSugestoes(true);
+          }}
+          onFocus={() => setMostrarSugestoes(true)}
+          onBlur={() => setMostrarSugestoes(false)}
+          autoCorrect={false}
+        />
 
         {mostrarSugestoes && sugestoes.length > 0 && (
           <ScrollView
             style={styles.listaSugestoes}
-            keyboardShouldPersistTaps="handled" 
+            keyboardShouldPersistTaps="handled"
             nestedScrollEnabled
           >
             {sugestoes.map((tipo) => (
@@ -132,18 +199,23 @@ export default function MinhasDoacoes({ navigation, route }: Props) {
           </ScrollView>
         )}
 
-        {/* Issue #09: lista com FlatList; keyExtractor usa o id da doação */}
+        {/* Lista com FlatList; keyExtractor usa o id; onEndReached = rolagem infinita */}
         <FlatList
-          data={doacoesFiltradas}
+          data={doacoes}
           keyExtractor={(doacao) => doacao.id}
           renderItem={({ item }) => <ItemDoacao doacao={item} onPress={abrirDetalhe} />}
+          onEndReached={carregarMais}
+          onEndReachedThreshold={0.5}
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={
-            doacoesFiltradas.length === 0 ? styles.vazioContainer : styles.lista
-          }
+          contentContainerStyle={doacoes.length === 0 ? styles.vazioContainer : styles.lista}
+          //4 estados da primeira página, cada um com a sua mensagem
           ListEmptyComponent={
-            doacoes.length === 0 ? (
-            
+            carregando ? (
+              <ActivityIndicator style={styles.carregando} /> // carregando
+            ) : erro !== '' ? (
+              blocoErro // erro (API desligada)
+            ) : filtro === '' ? (
+              // vazio: nenhuma doação cadastrada
               <View style={styles.vazio}>
                 <Text style={styles.vazioTexto}>Você ainda não registrou nenhuma doação.</Text>
                 <TouchableOpacity
@@ -154,13 +226,16 @@ export default function MinhasDoacoes({ navigation, route }: Props) {
                 </TouchableOpacity>
               </View>
             ) : (
-              
+              // vazio: o filtro não achou nada
               <View style={styles.vazio}>
-                <Text style={styles.vazioTexto}>
-                  Nenhuma doação encontrada para "{busca.trim()}".
-                </Text>
+                <Text style={styles.vazioTexto}>Nenhuma doação encontrada para "{filtro}".</Text>
               </View>
             )
+          }
+          ListFooterComponent={
+            doacoes.length > 0 ? (
+              carregando ? <ActivityIndicator style={styles.carregando} /> : erro !== '' ? blocoErro : undefined
+            ) : undefined
           }
         />
       </KeyboardAvoidingView>
@@ -175,6 +250,8 @@ const styles = StyleSheet.create({
   vazioContainer: { flexGrow: 1, justifyContent: 'center', padding: 20 },
   vazio: { alignItems: 'center' },
   vazioTexto: { fontSize: 16, color: '#333333', textAlign: 'center', marginBottom: 16 },
+  erroTexto: { fontSize: 15, color: '#d32f2f', textAlign: 'center' },
+  carregando: { marginVertical: 16 },
   busca: {
     borderWidth: 1,
     borderColor: '#ccc',
@@ -186,9 +263,8 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 8,
   },
-
   listaSugestoes: {
-    maxHeight: 180, 
+    maxHeight: 180,
     marginHorizontal: 20,
     marginBottom: 8,
     borderWidth: 1,
@@ -199,7 +275,7 @@ const styles = StyleSheet.create({
   },
   sugestaoItem: {
     padding: 12,
-    minHeight: 44, 
+    minHeight: 44,
     justifyContent: 'center',
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
@@ -212,7 +288,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 44, 
+    minHeight: 44,
+  },
+  botaoTentar: {
+    backgroundColor: '#1B3A5C',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    marginTop: 12,
+    minHeight: 44,
+    justifyContent: 'center',
   },
   botaoTexto: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
   sucesso: {

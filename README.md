@@ -57,18 +57,24 @@ Swagger: http://localhost:8081/swagger-ui/index.html
 
 Chamadas e respostas:
 1. Sem filtro: http://localhost:8081/api/v1/pontos/filtro?page=0&size=10
-2. Filtrando por bairro: http://localhost:8081/api/v1/pontos/filtro?page=0&size=10&sort=bairro,asc
+2. Filtrando por bairro: http://localhost:8081/api/v1/pontos/filtro?filtro=Setor&page=0&size=10&sort=bairro,asc
 3. Segunda página: http://localhost:8081/api/v1/pontos/filtro?page=1&size=10
 
 ---
 
-## N2-3 e N2-4 · App com pontos
+## N2-3 · App listando os pontos da API
 
 Funciona no celular pela rede local e pelo navegador
 
 ---
 
-## N2-5 · API de doações
+## N2-4 · App: cadastrar, editar e excluir pontos
+
+Concluido
+
+---
+
+## N2-5 · CRUD de doações na API
 
 ### Endpoints
 
@@ -108,9 +114,15 @@ Funciona no celular pela rede local e pelo navegador
 
 ---
 
-## N2-6 e N2-7 · App com doações
+## N2-6 Histórico e cadastro de doações pela API
 
-_(pendente)_
+Concluído
+
+---
+
+## N2-7 · Editar e excluir doação pela API 
+
+Pendente
 
 ---
 

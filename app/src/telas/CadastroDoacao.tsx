@@ -12,25 +12,26 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../tipos/navegacao';
-import type { Doacao } from '../tipos/doacao';
+import type { DoacaoDados } from '../tipos/doacao';
 import type { Ponto } from '../tipos/ponto';
-import { listar as listarTodosPontos } from '../services/pontosService'; 
+import { listar as listarTodosPontos } from '../services/pontosService';
+import { cadastrar, editar } from '../services/doacoesService'; 
+import { ApiError } from '../services/api'; 
 import { tiposItem } from '../dados/TiposItem';
-import { salvarDoacao, atualizarDoacao, carregarRascunho, salvarRascunho } from '../services/doacaoStorage';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CadastroDoacao'>;
 
 // FORMULÁRIO ÚNICO: serve para CADASTRAR uma doação nova e para EDITAR uma existente.
 export default function CadastroDoacao({ route, navigation }: Props) {
-    // Issue #11: se a tela recebeu uma doação pela navegação, está em modo edição.
+    // Se a tela recebeu uma doação pela navegação, está em modo edição.
     const doacaoEditando = route.params?.doacao;
     const modoEdicao = doacaoEditando !== undefined;
 
-    // Campos do formulário. Issue #11: na edição já começam preenchidos com os dados da doação.
+    // Campos do formulário. Na edição já começam preenchidos com os dados da doação.
     const [tipoItem, setTipoItem] = useState(doacaoEditando?.tipoItem ?? '');
-    const [quantidade, setQuantidade] = useState(doacaoEditando ? String(doacaoEditando.quantidade) : '') 
-    const [pontoDestino, setPontoDestino] = useState(doacaoEditando?.pontoDestino ?? '');
+    const [quantidade, setQuantidade] = useState(doacaoEditando ? String(doacaoEditando.quantidade) : '');
     const [descricao, setDescricao] = useState(doacaoEditando?.descricao ?? '');
+    const [pontoSelecionado, setPontoSelecionado] = useState<Ponto | null>(null);
 
     // Mensagens de erro de cada campo (vazias quando está tudo certo)
     const [erroTipoItem, setErroTipoItem] = useState('');
@@ -38,50 +39,19 @@ export default function CadastroDoacao({ route, navigation }: Props) {
     const [erroPontoDestino, setErroPontoDestino] = useState('');
     const [erroDescricao, setErroDescricao] = useState('');
 
-    // Ponto escolhido na lista 
-    const [pontoSelecionado, setPontoSelecionado] = useState<Ponto | null>(null);
-    // lista de pontos vinda da API e mensagem de erro caso ela esteja fora do ar
+    // Pontos vindos da API e mensagem de erro caso ela esteja fora do ar
     const [pontos, setPontos] = useState<Ponto[]>([]);
     const [erroPontos, setErroPontos] = useState('');
-    const [mostrarPontos, setMostrarPontos] = useState(false);
-    const [mostrarTipos, setMostrarTipos] = useState(false); 
-    const [carregado, setCarregado] = useState(false);
+    const [carregandoPontos, setCarregandoPontos] = useState(true); //NOVO
+    const [mostrarTipos, setMostrarTipos] = useState(false);
     const [mensagemSucesso, setMensagemSucesso] = useState('');
+
+    //NOVO: erro vindo da API ao salvar (400 ou API desligada)
+    const [erroEnvio, setErroEnvio] = useState('');
+    const [enviando, setEnviando] = useState(false);
 
     // Os outros campos só liberam depois que o tipo do item é escolhido
     const tipoSelecionado = tipoItem.trim() !== '';
-
-    // RASCUNHO (só no cadastro novo): ao abrir, recupera o que a pessoa já tinha preenchido
-    useEffect(() => {
-        if (modoEdicao) return;
-
-        (async () => {
-            const r = await carregarRascunho();
-            if (r) {
-                setTipoItem(r.tipoItem);
-                setQuantidade(r.quantidade);
-                setPontoDestino(r.pontoDestino);
-                setDescricao(r.descricao ?? '');
-            }
-            setCarregado(true);
-        })();
-    }, []);
-
-    // RASCUNHO: a cada mudança nos campos, salva o estado atual
-    useEffect(() => {
-        if (!carregado || modoEdicao) return;
-        const vazio = !tipoItem && !quantidade && !pontoDestino && !descricao;
-        salvarRascunho(
-            vazio
-                ? null
-                : {
-                    tipoItem,
-                    quantidade,
-                    pontoDestino,
-                    descricao,
-                }
-        );
-    }, [carregado, tipoItem, quantidade, pontoDestino, descricao]);
 
     // Faz a mensagem de sucesso sumir sozinha depois de 1 segundo
     useEffect(() => {
@@ -93,10 +63,13 @@ export default function CadastroDoacao({ route, navigation }: Props) {
 
     const carregarPontos = useCallback(async () => {
         setErroPontos('');
+        setCarregandoPontos(true);
         try {
             setPontos(await listarTodosPontos());
         } catch {
             setErroPontos('Não foi possível carregar os pontos. Verifique se a API está ligada.');
+        } finally {
+            setCarregandoPontos(false);
         }
     }, []);
 
@@ -104,24 +77,25 @@ export default function CadastroDoacao({ route, navigation }: Props) {
         carregarPontos();
     }, [carregarPontos]);
 
+    // Na edição: quando os pontos chegam, destaca o ponto que já era o destino da doação
     useEffect(() => {
-        if (pontos.length === 0 || pontoSelecionado !== null) return;
-        const achado = pontos.find((p) => p.nome === pontoDestino);
+        if (!doacaoEditando || pontoSelecionado !== null) return;
+        const achado = pontos.find((p) => p.nome === doacaoEditando.pontoDestino);
         if (achado) setPontoSelecionado(achado);
     }, [pontos]);
 
-    // ---------- VALIDAÇÕES ----------
+    // ---------- VALIDAÇÕES (cada uma devolve true se o campo está ok) ----------
 
-    // Tipo do item: precisa estar selecionado
-    function validarTipoItem(valor: string) {
+    function validarTipoItem(valor: string): boolean {
         setTipoItem(valor);
 
         if (valor.trim() === '') {
             setErroTipoItem('Selecione o tipo do item.');
-            return;
+            return false;
         }
 
         setErroTipoItem('');
+        return true;
     }
 
     function selecionarTipo(tipo: string) {
@@ -129,37 +103,43 @@ export default function CadastroDoacao({ route, navigation }: Props) {
         setMostrarTipos(false);
     }
 
-    // Quantidade: não pode ser vazia e deve ser um número inteiro
-    function validarQuantidade(valor: string) {
+    // Quantidade: não pode ser vazia, deve ser inteiro e maior que zero
+    function validarQuantidade(valor: string): boolean {
         setQuantidade(valor);
 
         if (valor.trim() === '') {
             setErroQuantidade('Informe a quantidade.');
-            return;
+            return false;
         }
 
         if (!/^\d+$/.test(valor)) {
             setErroQuantidade('Quantidade deve ser um número inteiro.');
-            return;
+            return false;
+        }
+
+        if (Number(valor) <= 0) {
+            setErroQuantidade('Quantidade deve ser maior que zero.');
+            return false;
         }
 
         setErroQuantidade('');
+        return true;
     }
 
-    // Descrição: não pode ser vazia
-    function validarDescricao(valor: string) {
+    function validarDescricao(valor: string): boolean {
         setDescricao(valor);
 
         if (valor.trim() === '') {
             setErroDescricao('Informe uma descrição para o item.');
-            return;
+            return false;
         }
 
         setErroDescricao('');
+        return true;
     }
 
-    // Ponto de destino: deve ter sido escolhido na lista (não vale só digitar o nome)
-    function validarPontoDestino() {
+    // Ponto de destino: precisa ter sido escolhido na lista
+    function validarPontoDestino(): boolean {
         if (pontoSelecionado === null) {
             setErroPontoDestino('Selecione um ponto de destino.');
             return false;
@@ -170,95 +150,77 @@ export default function CadastroDoacao({ route, navigation }: Props) {
     }
 
     function selecionarPonto(ponto: Ponto) {
-        setPontoDestino(ponto.nome);
         setPontoSelecionado(ponto);
-        setMostrarPontos(false);
+        setErroPontoDestino('');
     }
 
-    // Lista de pontos para escolher
-    const pontosFiltrados = [...pontos] 
-        .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
-        .filter((ponto) =>
-            ponto.nome
-                .normalize('NFD')
-                .replace(/[\u0300-\u036f]/g, '')
-                .toLowerCase()
-                .includes(pontoDestino.toLowerCase())
-        );
+    //lista dos pontos da API em ordem alfabética
+    const pontosOrdenados = [...pontos].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
 
     // ---------- SALVAR ----------
-    // Cadastra uma doação nova OU salva as alterações de uma existente
+    // Cadastra uma doação nova (POST) OU salva as alterações de uma existente (PUT)
     async function handleCadastrar() {
         setMensagemSucesso('');
+        setErroEnvio('');
 
         // Roda todas as validações para mostrar todos os erros de uma vez
-        validarTipoItem(tipoItem);
-        validarQuantidade(quantidade);
-        validarDescricao(descricao);
+        const okTipo = validarTipoItem(tipoItem);
+        const okQuantidade = validarQuantidade(quantidade);
+        const okDescricao = validarDescricao(descricao);
+        const okPonto = validarPontoDestino();
 
-        const pontoValido = validarPontoDestino();
+        // Se algum campo estiver inválido, não envia nada
+        if (!okTipo || !okQuantidade || !okDescricao || !okPonto) return;
 
-        // Se algum campo estiver inválido, para aqui e não salva nada
-        if (
-            tipoItem.trim() === '' ||
-            quantidade.trim() === '' ||
-            !/^\d+$/.test(quantidade) ||
-            descricao.trim() === '' ||
-            !pontoValido
-        ) {
-            return;
-        }
-
-        // Issue #11: EDIÇÃO. Mantém o mesmo id (...doacaoEditando) e atualiza a doação existente,
-        if (doacaoEditando) {
-            const atualizada: Doacao = {
-                ...doacaoEditando,
-                tipoItem: tipoItem.trim(),
-                quantidade: Number(quantidade.trim()), 
-                pontoDestino: pontoSelecionado!.nome,
-                descricao: descricao.trim(),
-            };
-
-            const ok = await atualizarDoacao(atualizada);
-            if (!ok) return;
-
-            navigation.popTo('DetalheDoacao', {
-                doacao: atualizada,
-                mensagem: `Doação nº ${atualizada.id} editada com sucesso!`,
-            });
-            return;
-        }
-        // Salva o cadastro novo
-        const novaDoacao = await salvarDoacao({
+        // Vai para a API o NOME do ponto escolhido
+        const dados: DoacaoDados = {
             tipoItem: tipoItem.trim(),
-            quantidade: Number(quantidade.trim()), 
+            quantidade: Number(quantidade.trim()),
             pontoDestino: pontoSelecionado!.nome,
             descricao: descricao.trim(),
-        });
+        };
 
-        if (!novaDoacao) return;
+        setEnviando(true);
+        try {
 
-        setMensagemSucesso(`Doação nº ${novaDoacao.id} cadastrada com sucesso!`);
+            if (doacaoEditando) {
+                const atualizada = await editar(doacaoEditando.id, dados);
+                navigation.popTo('DetalheDoacao', {
+                    doacao: atualizada,
+                    mensagem: 'Doação editada com sucesso!',
+                });
+                return;
+            }
 
-        // Limpa o formulário para um novo cadastro
-        setTipoItem('');
-        setQuantidade('');
-        setPontoDestino('');
-        setDescricao('');
-        setPontoSelecionado(null);
-        setMostrarTipos(false);
+            await cadastrar(dados);
+            setMensagemSucesso('Doação cadastrada com sucesso!');
 
-        setErroTipoItem('');
-        setErroQuantidade('');
-        setErroPontoDestino('');
-        setErroDescricao('');
+            // Só chega aqui se a API aceitou: limpa o formulário para um novo cadastro
+            setTipoItem('');
+            setQuantidade('');
+            setDescricao('');
+            setPontoSelecionado(null);
+            setMostrarTipos(false);
+            setErroTipoItem('');
+            setErroQuantidade('');
+            setErroPontoDestino('');
+            setErroDescricao('');
+        } catch (e) {
+            //Em qualquer falha a tela continua aberta, com tudo o que foi digitado
+            if (e instanceof ApiError && e.status === 400) {
+                setErroEnvio('A API recusou os dados enviados. Confira os campos e tente novamente.');
+            } else if (e instanceof ApiError && e.status === 404) {
+                setErroEnvio('Esta doação não existe mais na API.');
+            } else {
+                setErroEnvio('Não foi possível falar com a API. Verifique se ela está ligada e tente novamente.');
+            }
+        } finally {
+            setEnviando(false);
+        }
     }
 
     return (
-        <SafeAreaView
-            style={styles.container}
-            edges={['bottom', 'left', 'right']}
-        >
+        <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
             <KeyboardAvoidingView
                 style={styles.flex}
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -294,9 +256,7 @@ export default function CadastroDoacao({ route, navigation }: Props) {
                             </View>
                         )}
 
-                        {erroTipoItem !== '' && (
-                            <Text style={styles.erro}>{erroTipoItem}</Text>
-                        )}
+                        {erroTipoItem !== '' && <Text style={styles.erro}>{erroTipoItem}</Text>}
                     </View>
 
                     {/* Campo descrição (bloqueado até escolher o tipo) */}
@@ -312,9 +272,7 @@ export default function CadastroDoacao({ route, navigation }: Props) {
                             multiline
                         />
 
-                        {erroDescricao !== '' && (
-                            <Text style={styles.erro}>{erroDescricao}</Text>
-                        )}
+                        {erroDescricao !== '' && <Text style={styles.erro}>{erroDescricao}</Text>}
                     </View>
 
                     {/* Campo quantidade (só números inteiros) */}
@@ -330,81 +288,74 @@ export default function CadastroDoacao({ route, navigation }: Props) {
                             onChangeText={validarQuantidade}
                         />
 
-                        {erroQuantidade !== '' && (
-                            <Text style={styles.erro}>{erroQuantidade}</Text>
-                        )}
+                        {erroQuantidade !== '' && <Text style={styles.erro}>{erroQuantidade}</Text>}
                     </View>
 
-                    {/* Campo ponto de destino (digita para filtrar e escolhe na lista) */}
+                    {/* ponto de destino = um TouchableOpacity por ponto da API, o escolhido fica destacado */}
                     <View style={styles.campo}>
                         <Text style={styles.label}>Ponto de destino</Text>
 
-                        <TextInput
-                            style={[styles.input, !tipoSelecionado && styles.inputDesabilitado]}
-                            placeholder="Selecione um ponto de doação"
-                            value={pontoDestino}
-                            editable={tipoSelecionado}
-                            onFocus={() => setMostrarPontos(true)}
-                            onChangeText={(texto) => {
-                                setPontoDestino(texto);
-                                setPontoSelecionado(null); 
-                                setErroPontoDestino('');
-                                setMostrarPontos(true);
-                            }}
-                        />
-
-                        {mostrarPontos && pontoSelecionado === null && (
-                            <View style={styles.listaPontos}>
-                                {pontosFiltrados.map((ponto) => (
-                                    <TouchableOpacity
-                                        key={ponto.id}
-                                        style={styles.pontoItem}
-                                        onPress={() => selecionarPonto(ponto)}
-                                    >
-                                        <Text style={styles.pontoNome}>
-                                            {ponto.nome}
-                                        </Text>
-
-                                        <Text style={styles.pontoEndereco}>
-                                            {ponto.endereco}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-                        )}
+                        {carregandoPontos && <Text style={styles.dica}>Carregando pontos...</Text>}
 
                         {erroPontos !== '' && (
-                            <Text style={styles.erro}>{erroPontos}</Text>
+                            <>
+                                <Text style={styles.erro}>{erroPontos}</Text>
+                                <TouchableOpacity style={styles.botaoTentar} onPress={carregarPontos}>
+                                    <Text style={styles.textoBotao}>Tentar novamente</Text>
+                                </TouchableOpacity>
+                            </>
                         )}
 
-                        {erroPontoDestino !== '' && (
-                            <Text style={styles.erro}>
-                                {erroPontoDestino}
-                            </Text>
+                        {pontosOrdenados.length > 0 && (
+                            <ScrollView
+                                style={[styles.listaPontosRolavel, !tipoSelecionado && styles.listaDesabilitada]}
+                                nestedScrollEnabled
+                                keyboardShouldPersistTaps="handled"
+                            >
+                                {pontosOrdenados.map((ponto) => {
+                                    const escolhido = pontoSelecionado?.id === ponto.id;
+                                    return (
+                                        <TouchableOpacity
+                                            key={ponto.id}
+                                            disabled={!tipoSelecionado}
+                                            style={[styles.pontoItem, escolhido && styles.pontoItemEscolhido]}
+                                            onPress={() => selecionarPonto(ponto)}
+                                        >
+                                            <Text style={[styles.pontoNome, escolhido && styles.textoEscolhido]}>
+                                                {ponto.nome}
+                                            </Text>
+                                            <Text style={[styles.pontoEndereco, escolhido && styles.textoEscolhido]}>
+                                                {ponto.endereco}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    );
+                                })}
+                            </ScrollView>
                         )}
+
+                        {erroPontoDestino !== '' && <Text style={styles.erro}>{erroPontoDestino}</Text>}
                     </View>
 
+                    {/* mensagem de erro da API (400 ou API desligada) */}
+                    {erroEnvio !== '' && <Text style={styles.erroEnvio}>{erroEnvio}</Text>}
+
                     <TouchableOpacity
-                        style={styles.botao}
+                        style={[styles.botao, enviando && styles.botaoDesabilitado]}
                         onPress={handleCadastrar}
+                        disabled={enviando}
                     >
                         <Text style={styles.textoBotao}>
-                            {modoEdicao ? 'Salvar alterações' : 'Cadastrar Doação'}
+                            {enviando ? 'Enviando...' : modoEdicao ? 'Salvar alterações' : 'Cadastrar Doação'}
                         </Text>
                     </TouchableOpacity>
 
                     {modoEdicao && (
-                        <TouchableOpacity
-                            style={styles.botaoCancelar}
-                            onPress={() => navigation.goBack()}
-                        >
+                        <TouchableOpacity style={styles.botaoCancelar} onPress={() => navigation.goBack()}>
                             <Text style={styles.textoBotaoCancelar}>Cancelar</Text>
                         </TouchableOpacity>
                     )}
 
-                    {mensagemSucesso !== '' && (
-                        <Text style={styles.sucesso}>{mensagemSucesso}</Text>
-                    )}
+                    {mensagemSucesso !== '' && <Text style={styles.sucesso}>{mensagemSucesso}</Text>}
                 </ScrollView>
             </KeyboardAvoidingView>
         </SafeAreaView>
@@ -412,30 +363,11 @@ export default function CadastroDoacao({ route, navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#fff',
-    },
-
-    flex: {
-        flex: 1,
-    },
-
-    scrollContent: {
-        padding: 24,
-        flexGrow: 1,
-    },
-
-    campo: {
-        marginBottom: 16,
-    },
-
-    label: {
-        fontSize: 14,
-        fontWeight: '600',
-        marginBottom: 6,
-    },
-
+    container: { flex: 1, backgroundColor: '#fff' },
+    flex: { flex: 1 },
+    scrollContent: { padding: 24, flexGrow: 1 },
+    campo: { marginBottom: 16 },
+    label: { fontSize: 14, fontWeight: '600', marginBottom: 6 },
     input: {
         borderWidth: 1,
         borderColor: '#ccc',
@@ -444,44 +376,21 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
         fontSize: 16,
     },
-
-    inputDesabilitado: {
-        backgroundColor: '#eee',
-        color: '#999',
-    },
-
+    inputDesabilitado: { backgroundColor: '#eee', color: '#999' },
     seletor: {
         borderWidth: 1,
         borderColor: '#ccc',
         borderRadius: 8,
         paddingHorizontal: 12,
         paddingVertical: 10,
-        minHeight: 44, 
+        minHeight: 44,
         justifyContent: 'center',
     },
-
-    seletorTexto: {
-        fontSize: 16,
-        color: '#000',
-    },
-
-    seletorPlaceholder: {
-        fontSize: 16,
-        color: '#999',
-    },
-
-    dica: {
-        fontSize: 13,
-        color: '#666',
-        marginBottom: 12,
-    },
-
-    erro: {
-        color: '#d32f2f',
-        fontSize: 13,
-        marginTop: 4,
-    },
-
+    seletorTexto: { fontSize: 16, color: '#000' },
+    seletorPlaceholder: { fontSize: 16, color: '#999' },
+    dica: { fontSize: 13, color: '#666', marginBottom: 6 },
+    erro: { color: '#d32f2f', fontSize: 13, marginTop: 4 },
+    erroEnvio: { color: '#d32f2f', fontSize: 15, fontWeight: '600', textAlign: 'center', marginBottom: 8 },
     listaPontos: {
         marginTop: 4,
         borderWidth: 1,
@@ -489,26 +398,24 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         backgroundColor: '#fff',
     },
-
+    listaPontosRolavel: {
+        maxHeight: 260,
+        borderWidth: 1,
+        borderColor: '#ccc',
+        borderRadius: 8,
+        backgroundColor: '#fff',
+    },
+    listaDesabilitada: { opacity: 0.5 },
     pontoItem: {
         padding: 12,
-        minHeight: 44, 
+        minHeight: 44,
         borderBottomWidth: 1,
         borderBottomColor: '#eee',
     },
-
-    pontoNome: {
-        fontSize: 15,
-        fontWeight: 'bold',
-        color: '#1B3A5C',
-    },
-
-    pontoEndereco: {
-        fontSize: 13,
-        color: '#666',
-        marginTop: 4,
-    },
-
+    pontoItemEscolhido: { backgroundColor: '#1B3A5C' },
+    pontoNome: { fontSize: 15, fontWeight: 'bold', color: '#1B3A5C' },
+    pontoEndereco: { fontSize: 13, color: '#666', marginTop: 4 },
+    textoEscolhido: { color: '#fff' },
     botao: {
         backgroundColor: '#2e7d32',
         borderRadius: 8,
@@ -516,15 +423,20 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         marginTop: 8,
-        minHeight: 44, 
+        minHeight: 44,
     },
-
-    textoBotao: {
-        color: '#fff',
-        fontWeight: 'bold',
-        fontSize: 16,
+    botaoDesabilitado: { opacity: 0.6 },
+    botaoTentar: {
+        backgroundColor: '#1B3A5C',
+        borderRadius: 8,
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        marginTop: 8,
+        minHeight: 44,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
-
+    textoBotao: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
     botaoCancelar: {
         borderWidth: 1,
         borderColor: '#666',
@@ -533,15 +445,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         marginTop: 12,
-        minHeight: 44, 
+        minHeight: 44,
     },
-
-    textoBotaoCancelar: {
-        color: '#333333',
-        fontWeight: 'bold',
-        fontSize: 16,
-    },
-
+    textoBotaoCancelar: { color: '#333333', fontWeight: 'bold', fontSize: 16 },
     sucesso: {
         color: '#2e7d32',
         fontSize: 15,

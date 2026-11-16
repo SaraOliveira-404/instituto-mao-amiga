@@ -1,9 +1,8 @@
-// Issue #10: transforma a data salva (ISO) em texto legível, ex: "02/10/2026 14:30"
-// É usado em ItemDoacao e DetalheDoacao por isso está em um aquivo separado para não precisar repetir o código
-// Fica em utilitarios por retornar algo diferente do que recebe
+// Transforma a data salva (ISO) em texto legível, ex: "02/10/2026 14:30"
 
 export function formatarData(iso: string): string {
-  const data = new Date(iso);
+  const limpo = iso.replace(/(\.\d{3})\d+/, '$1');
+  const data = new Date(limpo);
   if (isNaN(data.getTime())) return '';
   return data.toLocaleString('pt-BR', {
     day: '2-digit',

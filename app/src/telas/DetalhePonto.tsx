@@ -1,34 +1,23 @@
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   ScrollView,
   Text,
   TouchableOpacity,
-  View,
   StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native'; 
+import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../tipos/navegacao';
 import type { Ponto } from '../tipos/ponto';
-import type { Doacao } from '../tipos/doacao';
-import { buscarPorId, excluir } from '../services/pontosService'; 
-import { listarDoacoesPorPonto } from '../services/doacaoStorage';
-import { ItemDoacao } from '../componentes/ItemDoacao';
-import { ResumoDoacoes } from '../componentes/ResumoDoacoes';
+import { buscarPorId, excluir } from '../services/pontosService';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'DetalhePonto'>;
 
-// Mostra os dados do ponto, o resumo e as doações recentes destinadas a ele
+// Mostra os dados do ponto, com os botões de editar e excluir
 function PontoDetalhe({ ponto, navigation }: { ponto: Ponto; navigation: Props['navigation'] }) {
-  const [doacoes, setDoacoes] = useState<Doacao[]>([]);
-
-  useEffect(() => {
-    listarDoacoesPorPonto(ponto.nome).then(setDoacoes);
-  }, [ponto.nome]);
-
   // pede confirmação (Cancelar / Excluir) e só então envia o DELETE
   function confirmarExclusao() {
     Alert.alert(
@@ -75,20 +64,6 @@ function PontoDetalhe({ ponto, navigation }: { ponto: Ponto; navigation: Props['
         <TouchableOpacity style={styles.botaoExcluir} onPress={confirmarExclusao}>
           <Text style={styles.botaoTexto}>Excluir ponto</Text>
         </TouchableOpacity>
-
-        <View style={styles.secaoResumo}>
-          <ResumoDoacoes doacoes={doacoes} titulo="Resumo deste ponto" />
-        </View>
-
-        <View style={styles.secaoDoacoes}>
-          <Text style={styles.secaoTitulo}>Doações deste ponto</Text>
-
-          {doacoes.length === 0 ? (
-            <Text style={styles.vazio}>Nenhuma doação registrada ainda.</Text>
-          ) : (
-            doacoes.map((d) => <ItemDoacao key={d.id} doacao={d} />)
-          )}
-        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -166,10 +141,6 @@ const styles = StyleSheet.create({
     minHeight: 44,
   },
   botaoTexto: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
-  secaoResumo: { marginTop: 24 },
-  secaoDoacoes: { marginTop: 8 },
-  secaoTitulo: { fontSize: 16, fontWeight: 'bold', color: '#1B3A5C', marginBottom: 8 },
-  vazio: { fontSize: 14, color: '#666' },
   centro: { marginTop: 32 },
   mensagem: { fontSize: 16, color: '#333333', textAlign: 'center', marginTop: 32, padding: 20 },
   mensagemErro: { fontSize: 16, color: '#d32f2f', textAlign: 'center', marginTop: 32, padding: 20 },

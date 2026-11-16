@@ -1,4 +1,3 @@
-// tipo da doação (antes ficava em tipos.ts). Agora quantidade é número.
 export type Doacao = {
   id: string;
   tipoItem: string;
@@ -6,4 +5,16 @@ export type Doacao = {
   pontoDestino: string;
   criadoEm: string;
   descricao: string;
+};
+
+export type DoacaoDados = Omit<Doacao, 'id' | 'criadoEm'>;
+
+export type PaginaDoacoes = {
+  content: Doacao[];
+  page: {
+    size: number;
+    number: number;
+    totalElements: number;
+    totalPages: number;
+  };
 };

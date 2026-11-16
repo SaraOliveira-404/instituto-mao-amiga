@@ -2,13 +2,12 @@ import { useEffect, useState } from 'react';
 import { Alert, ScrollView, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../tipos/navegacao'; 
-import { excluirDoacao } from '../services/doacaoStorage';
+import type { RootStackParamList } from '../tipos/navegacao';
+import { excluir } from '../services/doacoesService'; 
 import { formatarData } from '../utilitarios/formatarData';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'DetalheDoacao'>;
 
-// Issue #10: TELA DE DETALHE DA DOAÇÃO 
 export default function DetalheDoacao({ route, navigation }: Props) {
   const { doacao } = route.params;
   const [mensagemSucesso, setMensagemSucesso] = useState('');
@@ -29,7 +28,7 @@ export default function DetalheDoacao({ route, navigation }: Props) {
     return () => clearTimeout(timer);
   }, [mensagemSucesso]);
 
-  // Issue #10: pede confirmação (Alert) antes de apagar
+  // Pede confirmação (Alert) antes de apagar
   function confirmarExclusao() {
     Alert.alert(
       'Excluir doação',
@@ -40,16 +39,18 @@ export default function DetalheDoacao({ route, navigation }: Props) {
           text: 'Excluir',
           style: 'destructive',
           onPress: async () => {
-
-            // Apaga do armazenamento
-            const ok = await excluirDoacao(doacao.id);
-            if (ok) {
+            // apaga na API (DELETE). Se falhar, continua na tela e avisa (não finge que deu certo)
+            try {
+              await excluir(doacao.id);
               // Volta ao histórico enviando a mensagem de sucesso
               navigation.popTo('MinhasDoacoes', {
-                mensagem: `Doação nº ${doacao.id} excluída com sucesso!`,
+                mensagem: 'Doação excluída com sucesso!',
               });
-            } else {
-              Alert.alert('Erro', 'Não foi possível excluir a doação. Tente novamente.');
+            } catch {
+              Alert.alert(
+                'Erro',
+                'Não foi possível excluir a doação. Verifique se a API está ligada e tente novamente.'
+              );
             }
           },
         },
@@ -66,7 +67,7 @@ export default function DetalheDoacao({ route, navigation }: Props) {
 
         <Text style={styles.titulo}>{doacao.tipoItem}</Text>
 
-        {/* Issue #10: todos os campos da doação */}
+        {/* Todos os campos da doação */}
         <Text style={styles.rotulo}>ID</Text>
         <Text style={styles.valor} selectable>{doacao.id}</Text>
 
@@ -85,7 +86,7 @@ export default function DetalheDoacao({ route, navigation }: Props) {
         <Text style={styles.rotulo}>Registrada em</Text>
         <Text style={styles.valor}>{formatarData(doacao.criadoEm)}</Text>
 
-        {/* Issue #11: abre o MESMO formulário do cadastro, já preenchido com esta doação */}
+        {/* Abre o MESMO formulário do cadastro, já preenchido com esta doação */}
         <TouchableOpacity
           style={styles.botaoEditar}
           onPress={() => navigation.navigate('CadastroDoacao', { doacao })}
@@ -93,7 +94,7 @@ export default function DetalheDoacao({ route, navigation }: Props) {
           <Text style={styles.botaoTexto}>Editar doação</Text>
         </TouchableOpacity>
 
-        {/* Issue #10: botão de excluir (pede confirmação antes) */}
+        {/* Botão de excluir (pede confirmação antes) */}
         <TouchableOpacity style={styles.botaoExcluir} onPress={confirmarExclusao}>
           <Text style={styles.botaoTexto}>Excluir doação</Text>
         </TouchableOpacity>
@@ -115,7 +116,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 32,
-    minHeight: 44, 
+    minHeight: 44,
   },
   botaoExcluir: {
     backgroundColor: '#d32f2f',
@@ -124,7 +125,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 12,
-    minHeight: 44, 
+    minHeight: 44,
   },
   botaoTexto: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
   sucesso: {
