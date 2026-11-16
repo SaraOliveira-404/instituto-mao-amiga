@@ -70,7 +70,7 @@ Funciona no celular pela rede local e pelo navegador
 
 ## N2-4 · App: cadastrar, editar e excluir pontos
 
-Concluido
+Concluído
 
 ---
 
@@ -122,7 +122,7 @@ Concluído
 
 ## N2-7 · Editar e excluir doação pela API 
 
-Pendente
+Concluído
 
 ---
 

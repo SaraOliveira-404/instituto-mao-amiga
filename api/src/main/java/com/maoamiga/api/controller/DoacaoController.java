@@ -2,7 +2,7 @@ package com.maoamiga.api.controller;
 
 import com.maoamiga.api.dto.DoacaoRequestDTO;
 import com.maoamiga.api.dto.DoacaoResponseDTO;
-import com.maoamiga.api.service.DoacaoService;
+import com.maoamiga.api.service.doacoesService;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class DoacaoController {
 
-    private final DoacaoService service;
+    private final doacoesService service;
 
     // GET /api/v1/doacoes/filtro?filtro=roupa&page=0&size=10  
     @GetMapping("/filtro")

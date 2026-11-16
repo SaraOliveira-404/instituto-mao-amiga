@@ -15,8 +15,8 @@ import type { RootStackParamList } from '../tipos/navegacao';
 import type { DoacaoDados } from '../tipos/doacao';
 import type { Ponto } from '../tipos/ponto';
 import { listar as listarTodosPontos } from '../services/pontosService';
-import { cadastrar, editar } from '../services/doacoesService'; 
-import { ApiError } from '../services/api'; 
+import { cadastrar, editar } from '../services/doacoesService';
+import { ApiError } from '../services/api';
 import { tiposItem } from '../dados/TiposItem';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CadastroDoacao'>;
@@ -184,9 +184,9 @@ export default function CadastroDoacao({ route, navigation }: Props) {
         try {
 
             if (doacaoEditando) {
-                const atualizada = await editar(doacaoEditando.id, dados);
+                await editar(doacaoEditando.id, dados);
                 navigation.popTo('DetalheDoacao', {
-                    doacao: atualizada,
+                    doacaoId: doacaoEditando.id,
                     mensagem: 'Doação editada com sucesso!',
                 });
                 return;

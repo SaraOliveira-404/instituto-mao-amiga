@@ -3,7 +3,6 @@ com/maoamiga/api/dto/PontoResponseDTO.class
 com/maoamiga/api/repository/DoacaoRepository.class
 com/maoamiga/api/controller/DoacaoController.class
 com/maoamiga/api/config/DataLoader.class
-com/maoamiga/api/service/DoacaoService.class
 com/maoamiga/api/dto/DoacaoRequestDTO.class
 com/maoamiga/api/controller/PontoController.class
 com/maoamiga/api/dto/DoacaoResponseDTO.class

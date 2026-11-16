@@ -1,16 +1,54 @@
-import { useEffect, useState } from 'react';
-import { Alert, ScrollView, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../tipos/navegacao';
-import { excluir } from '../services/doacoesService'; 
+import type { Doacao } from '../tipos/doacao';
+import { buscarPorId, excluir } from '../services/doacoesService';
 import { formatarData } from '../utilitarios/formatarData';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'DetalheDoacao'>;
 
+// 4 estados possíveis da busca na API
+type Estado = 'carregando' | 'ok' | 'naoEncontrado' | 'erro';
+
 export default function DetalheDoacao({ route, navigation }: Props) {
-  const { doacao } = route.params;
+  const { doacaoId } = route.params;
+  const [doacao, setDoacao] = useState<Doacao | null>(null);
+  const [estado, setEstado] = useState<Estado>('carregando');
   const [mensagemSucesso, setMensagemSucesso] = useState('');
+
+  useFocusEffect(
+    useCallback(() => {
+      let ativo = true;
+
+      buscarPorId(doacaoId)
+        .then((encontrada) => {
+          if (!ativo) return;
+          if (encontrada === null) {
+            setEstado('naoEncontrado');
+          } else {
+            setDoacao(encontrada);
+            setEstado('ok');
+          }
+        })
+        .catch(() => {
+          if (ativo) setEstado('erro');
+        });
+
+      return () => {
+        ativo = false;
+      };
+    }, [doacaoId])
+  );
 
   useEffect(() => {
     const mensagem = route.params.mensagem;
@@ -30,6 +68,8 @@ export default function DetalheDoacao({ route, navigation }: Props) {
 
   // Pede confirmação (Alert) antes de apagar
   function confirmarExclusao() {
+    if (doacao === null) return;
+
     Alert.alert(
       'Excluir doação',
       'Tem certeza que deseja excluir esta doação? Essa ação não pode ser desfeita.',
@@ -42,7 +82,7 @@ export default function DetalheDoacao({ route, navigation }: Props) {
             // apaga na API (DELETE). Se falhar, continua na tela e avisa (não finge que deu certo)
             try {
               await excluir(doacao.id);
-              // Volta ao histórico enviando a mensagem de sucesso
+              // Volta ao histórico enviando a mensagem de sucesso (o histórico recarrega e a doação some)
               navigation.popTo('MinhasDoacoes', {
                 mensagem: 'Doação excluída com sucesso!',
               });
@@ -55,6 +95,16 @@ export default function DetalheDoacao({ route, navigation }: Props) {
           },
         },
       ]
+    );
+  }
+
+  if (estado === 'carregando') return <ActivityIndicator style={styles.centro} />;
+  if (estado === 'naoEncontrado') return <Text style={styles.mensagem}>Doação não encontrada.</Text>;
+  if (estado === 'erro' || doacao === null) {
+    return (
+      <Text style={styles.mensagemErro}>
+        Não foi possível carregar a doação. Verifique se a API está ligada.
+      </Text>
     );
   }
 
@@ -135,4 +185,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 16,
   },
+  centro: { marginTop: 32 },
+  mensagem: { fontSize: 16, color: '#333333', textAlign: 'center', marginTop: 32, padding: 20 },
+  mensagemErro: { fontSize: 16, color: '#d32f2f', textAlign: 'center', marginTop: 32, padding: 20 },
 });

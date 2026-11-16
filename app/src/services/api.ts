@@ -1,11 +1,4 @@
-// ÚNICO arquivo do app que chama fetch. A URL da API fica só aqui.
-//
-// Onde colocar o endereço:
-//  - Celular com Expo Go: IP do computador na mesma rede Wi-Fi (descubra com `hostname -I`)
-//  - Emulador Android: http://10.0.2.2:8081/api/v1
-//  - Emulador iOS / web: http://localhost:8081/api/v1
-// porta ajustada para 8083 (a mesma do application.properties); o `;;` do fim foi removido
-export const API_URL = 'http://192.168.2.8:8083/api/v1';
+export const API_URL = 'http://localhost:8083/api/v1';
 
 // Erro com o status HTTP, para as telas saberem diferenciar 404 de "API fora do ar"
 export class ApiError extends Error {

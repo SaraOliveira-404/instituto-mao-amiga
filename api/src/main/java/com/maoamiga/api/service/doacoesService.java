@@ -15,7 +15,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 @Service
 @RequiredArgsConstructor
-public class DoacaoService {
+public class doacoesService {
 
     private final DoacaoRepository repository;
 

@@ -8,5 +8,5 @@ export type RootStackParamList = {
   CadastroPonto: { ponto?: Ponto } | undefined; 
   CadastroDoacao: { doacao?: Doacao } | undefined;
   MinhasDoacoes: { mensagem?: string } | undefined;
-  DetalheDoacao: { doacao: Doacao; mensagem?: string };
+  DetalheDoacao: { doacaoId: string; mensagem?: string };
 };

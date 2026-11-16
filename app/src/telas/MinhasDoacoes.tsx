@@ -132,7 +132,7 @@ export default function MinhasDoacoes({ navigation, route }: Props) {
   // Ao tocar num item, abre o detalhe
   const abrirDetalhe = useCallback(
     (doacao: Doacao) => {
-      navigation.navigate('DetalheDoacao', { doacao });
+      navigation.navigate('DetalheDoacao', { doacaoId: doacao.id });
     },
     [navigation]
   );
