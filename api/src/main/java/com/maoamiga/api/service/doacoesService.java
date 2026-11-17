@@ -15,17 +15,18 @@ import org.springframework.web.server.ResponseStatusException;
 
 @Service
 @RequiredArgsConstructor
-public class doacoesService {
+public class DoacoesService {
 
     private final DoacaoRepository repository;
 
-    public Page<DoacaoResponseDTO> filtrar(String filtro, Pageable pageable) {
+    public Page<DoacaoResponseDTO> filtrar(String filtro, String ponto, Pageable pageable) {
         String texto = filtro == null ? "" : filtro.trim();
-        return repository.buscarPorTipo(texto, pageable).map(DoacaoResponseDTO::from);
+        String nomePonto = ponto == null ? "" : ponto.trim();
+        return repository.buscarPorTipo(texto, nomePonto, pageable).map(DoacaoResponseDTO::from);
     }
 
     public DoacaoResponseDTO buscar(UUID id) {
-        return DoacaoResponseDTO.from(buscarEntidade(id)); 
+        return DoacaoResponseDTO.from(buscarEntidade(id));
     }
 
     public DoacaoResponseDTO cadastrar(DoacaoRequestDTO dto) {
@@ -35,7 +36,7 @@ public class doacoesService {
     }
 
     public DoacaoResponseDTO editar(UUID id, DoacaoRequestDTO dto) {
-        Doacao doacao = buscarEntidade(id); 
+        Doacao doacao = buscarEntidade(id); // 404 se não existir
         doacao.setTipoItem(dto.tipoItem().trim());
         doacao.setQuantidade(dto.quantidade());
         doacao.setPontoDestino(dto.pontoDestino().trim());
@@ -45,7 +46,7 @@ public class doacoesService {
     }
 
     public void excluir(UUID id) {
-        repository.delete(buscarEntidade(id)); 
+        repository.delete(buscarEntidade(id));
     }
 
     private Doacao buscarEntidade(UUID id) {

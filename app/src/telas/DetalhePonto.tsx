@@ -1,10 +1,10 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   ScrollView,
   Text,
   TouchableOpacity,
+  View,
   StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -12,37 +12,56 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../tipos/navegacao';
 import type { Ponto } from '../tipos/ponto';
+import type { Doacao } from '../tipos/doacao';
 import { buscarPorId, excluir } from '../services/pontosService';
+import { buscarPagina as buscarDoacoes } from '../services/doacoesService';
+import { ItemDoacao } from '../componentes/ItemDoacao';
+import { confirmar, avisar } from '../utilitarios/confirmar';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'DetalhePonto'>;
 
-// Mostra os dados do ponto, com os botões de editar e excluir
+// Mostra os dados do ponto, os botões e as doações recebidas por ele
 function PontoDetalhe({ ponto, navigation }: { ponto: Ponto; navigation: Props['navigation'] }) {
-  // pede confirmação (Cancelar / Excluir) e só então envia o DELETE
-  function confirmarExclusao() {
-    Alert.alert(
+  const [doacoes, setDoacoes] = useState<Doacao[] | null>(null); 
+  const [erroDoacoes, setErroDoacoes] = useState(false);
+
+  // Busca as doações do ponto (as doações guardam o NOME do ponto de destino)
+  useEffect(() => {
+    let ativo = true;
+    setDoacoes(null);
+    setErroDoacoes(false);
+
+    buscarDoacoes(0, '', 100, ponto.nome)
+      .then((pagina) => {
+        if (ativo) setDoacoes(pagina.content);
+      })
+      .catch(() => {
+        if (ativo) setErroDoacoes(true);
+      });
+
+    return () => {
+      ativo = false;
+    };
+  }, [ponto.nome]);
+
+  // confirmar() funciona no navegador e no celular
+  async function confirmarExclusao() {
+    const confirmou = await confirmar(
       'Excluir ponto',
-      `Tem certeza que deseja excluir "${ponto.nome}"? Essa ação não pode ser desfeita.`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Excluir',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await excluir(ponto.id);
-              navigation.goBack(); // a lista recarrega sozinha e o ponto some
-            } catch {
-              // Não finge que deu certo: continua na tela e avisa
-              Alert.alert(
-                'Erro',
-                'Não foi possível excluir o ponto. Verifique se a API está ligada e tente novamente.'
-              );
-            }
-          },
-        },
-      ]
+      `Tem certeza que deseja excluir "${ponto.nome}"? Essa ação não pode ser desfeita.`
     );
+    if (!confirmou) return;
+
+    try {
+      await excluir(ponto.id);
+      navigation.goBack(); // a lista recarrega sozinha e o ponto some
+    } catch {
+      // Não finge que deu certo: continua na tela e avisa
+      avisar(
+        'Erro',
+        'Não foi possível excluir o ponto. Verifique se a API está ligada e tente novamente.'
+      );
+    }
   }
 
   return (
@@ -64,12 +83,29 @@ function PontoDetalhe({ ponto, navigation }: { ponto: Ponto; navigation: Props['
         <TouchableOpacity style={styles.botaoExcluir} onPress={confirmarExclusao}>
           <Text style={styles.botaoTexto}>Excluir ponto</Text>
         </TouchableOpacity>
+
+        {/* Doações recebidas por este ponto */}
+        <View style={styles.secao}>
+          <Text style={styles.secaoTitulo}>Doações neste ponto</Text>
+
+          {doacoes === null && !erroDoacoes && <ActivityIndicator />}
+
+          {erroDoacoes && (
+            <Text style={styles.erroDoacoes}>Não foi possível carregar as doações.</Text>
+          )}
+
+          {doacoes !== null && doacoes.length === 0 && (
+            <Text style={styles.campo}>Nenhuma doação registrada para este ponto.</Text>
+          )}
+
+          {doacoes !== null && doacoes.map((d) => <ItemDoacao key={d.id} doacao={d} />)}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-//Os 4 estados possíveis da busca na API
+// Os 4 estados possíveis da busca na API
 type Estado = 'carregando' | 'ok' | 'naoEncontrado' | 'erro';
 
 function DetalhePonto({ route, navigation }: Props) {
@@ -77,7 +113,7 @@ function DetalhePonto({ route, navigation }: Props) {
   const [ponto, setPonto] = useState<Ponto | null>(null);
   const [estado, setEstado] = useState<Estado>('carregando');
 
-  //busca o ponto por id na API (404 => "ponto não encontrado")
+  // Busca o ponto por id na API (404 => "ponto não encontrado")
   useFocusEffect(
     useCallback(() => {
       let ativo = true;
@@ -122,6 +158,9 @@ const styles = StyleSheet.create({
   scrollContent: { padding: 20 },
   nome: { fontSize: 22, fontWeight: 'bold', color: '#1B3A5C', marginBottom: 12 },
   campo: { fontSize: 16, marginTop: 6, color: '#333333' },
+  secao: { marginTop: 24 },
+  secaoTitulo: { fontSize: 17, fontWeight: 'bold', color: '#1B3A5C', marginBottom: 8 },
+  erroDoacoes: { fontSize: 14, color: '#d32f2f' },
   botaoEditar: {
     backgroundColor: '#1B3A5C',
     borderRadius: 8,

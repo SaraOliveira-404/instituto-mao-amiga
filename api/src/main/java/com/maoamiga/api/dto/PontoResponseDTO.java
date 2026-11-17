@@ -3,7 +3,6 @@ package com.maoamiga.api.dto;
 import com.maoamiga.api.entity.Ponto;
 import java.util.UUID;
 
-// DTO devolvido pela API: o controller nunca devolve a entidade.
 public record PontoResponseDTO(
         UUID id, 
         String nome,

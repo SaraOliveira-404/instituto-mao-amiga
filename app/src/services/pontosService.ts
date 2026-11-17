@@ -1,10 +1,8 @@
 import { get, post, put, del, ApiError } from './api';
 import type { Ponto, PontoDados, PaginaPontos } from '../tipos/ponto';
 
-//Marca que algum ponto mudou (cadastro, edição ou exclusão). A lista consulta isso ao voltar para recarregar
 let houveAlteracao = false;
 
-//Devolve true se houve alteração e já zera a marca (cada alteração recarrega a lista uma única vez)
 export function consumirAlteracao(): boolean {
   const resultado = houveAlteracao;
   houveAlteracao = false;
@@ -15,9 +13,9 @@ export function listar(): Promise<Ponto[]> {
   return get<Ponto[]>('/pontos');
 }
 
-export function buscarPagina(pagina = 0, filtro = '', tamanho = 10): Promise<PaginaPontos> {
+export function buscarPagina(pagina = 0, filtro = '', tamanho = 10, tipo = ''): Promise<PaginaPontos> {
   return get<PaginaPontos>(
-    `/pontos/filtro?filtro=${encodeURIComponent(filtro)}&page=${pagina}&size=${tamanho}`
+    `/pontos/filtro?filtro=${encodeURIComponent(filtro)}&tipo=${encodeURIComponent(tipo)}&page=${pagina}&size=${tamanho}`
   );
 }
 

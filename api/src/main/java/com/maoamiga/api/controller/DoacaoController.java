@@ -2,7 +2,7 @@ package com.maoamiga.api.controller;
 
 import com.maoamiga.api.dto.DoacaoRequestDTO;
 import com.maoamiga.api.dto.DoacaoResponseDTO;
-import com.maoamiga.api.service.doacoesService;
+import com.maoamiga.api.service.DoacoesService;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -19,14 +19,15 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class DoacaoController {
 
-    private final doacoesService service;
+    private final DoacoesService service;
 
-    // GET /api/v1/doacoes/filtro?filtro=roupa&page=0&size=10  
+    // GET /api/v1/doacoes/filtro?filtro=roupa&ponto=Nome do ponto&page=0&size=10
     @GetMapping("/filtro")
     public Page<DoacaoResponseDTO> filtrar(
             @RequestParam(defaultValue = "") String filtro,
+            @RequestParam(defaultValue = "") String ponto, // nome do ponto de destino (opcional)
             @PageableDefault(size = 10, sort = "criadoEm", direction = Sort.Direction.DESC) Pageable pageable) {
-        return service.filtrar(filtro, pageable);
+        return service.filtrar(filtro, ponto, pageable);
     }
 
     // GET /api/v1/doacoes/{id}  

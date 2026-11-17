@@ -11,6 +11,9 @@ import org.springframework.data.repository.query.Param;
 public interface DoacaoRepository extends JpaRepository<Doacao, UUID> {
 
     @Query("SELECT d FROM Doacao d " +
-           "WHERE LOWER(d.tipoItem) LIKE LOWER(CONCAT('%', :filtro, '%'))")
-    Page<Doacao> buscarPorTipo(@Param("filtro") String filtro, Pageable pageable);
+            "WHERE LOWER(d.tipoItem) LIKE LOWER(CONCAT('%', :filtro, '%')) " +
+            "AND (:ponto = '' OR d.pontoDestino = :ponto)")
+    Page<Doacao> buscarPorTipo(@Param("filtro") String filtro,
+            @Param("ponto") String ponto,
+            Pageable pageable);
 }

@@ -10,7 +10,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-// Entidade JPA: vira a tabela "doacao" no H2
 @Entity
 @Getter
 @Setter

@@ -1,7 +1,6 @@
 import { get, post, put, del, ApiError } from './api';
 import type { Doacao, DoacaoDados, PaginaDoacoes } from '../tipos/doacao';
 
-// Marca que alguma doação mudou (cadastro, edição ou exclusão).
 let houveAlteracao = false;
 
 export function consumirAlteracao(): boolean {
@@ -10,9 +9,9 @@ export function consumirAlteracao(): boolean {
   return resultado;
 }
 
-export function buscarPagina(pagina = 0, filtro = '', tamanho = 10): Promise<PaginaDoacoes> {
+export function buscarPagina(pagina = 0, filtro = '', tamanho = 10, ponto = ''): Promise<PaginaDoacoes> {
   return get<PaginaDoacoes>(
-    `/doacoes/filtro?filtro=${encodeURIComponent(filtro)}&page=${pagina}&size=${tamanho}`
+    `/doacoes/filtro?filtro=${encodeURIComponent(filtro)}&ponto=${encodeURIComponent(ponto)}&page=${pagina}&size=${tamanho}`
   );
 }
 

@@ -27,9 +27,11 @@ public class PontoService {
         return PontoResponseDTO.from(buscarEntidade(id));
     }
 
-    public Page<PontoResponseDTO> filtrar(String filtro, Pageable pageable) {
+
+    public Page<PontoResponseDTO> filtrar(String filtro, String tipo, Pageable pageable) {
         String texto = filtro == null ? "" : filtro.trim();
-        return repository.buscarPorFiltro(texto, pageable).map(PontoResponseDTO::from);
+        String tipoTexto = tipo == null ? "" : tipo.trim();
+        return repository.buscarPorFiltro(texto, tipoTexto, pageable).map(PontoResponseDTO::from);
     }
 
     public PontoResponseDTO cadastrar(PontoRequestDTO dto) {
@@ -38,7 +40,7 @@ public class PontoService {
     }
 
     public PontoResponseDTO editar(UUID id, PontoRequestDTO dto) {
-        Ponto ponto = buscarEntidade(id); // 404 se não existir
+        Ponto ponto = buscarEntidade(id); 
         ponto.setNome(dto.nome());
         ponto.setEndereco(dto.endereco());
         ponto.setBairro(dto.bairro());
@@ -48,10 +50,9 @@ public class PontoService {
     }
 
     public void excluir(UUID id) {
-        repository.delete(buscarEntidade(id)); // 404 se não existir
+        repository.delete(buscarEntidade(id)); 
     }
 
-    // Procura o ponto ou lança 404 (usado por buscar, editar e excluir)
     private Ponto buscarEntidade(UUID id) {
         return repository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ponto não encontrado"));

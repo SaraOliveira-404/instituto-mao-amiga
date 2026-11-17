@@ -3,10 +3,11 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import ListaPontos from './src/telas/ListaPontos';
 import DetalhePonto from './src/telas/DetalhePonto';
-import CadastroPonto from './src/telas/CadastroPonto'; 
+import CadastroPonto from './src/telas/CadastroPonto';
 import CadastroDoacao from './src/telas/CadastroDoacao';
 import MinhasDoacoes from './src/telas/MinhasDoacoes';
 import DetalheDoacao from './src/telas/DetalheDoacao';
+import MeusPontos from './src/telas/MeusPontos';
 import type { RootStackParamList } from './src/tipos/navegacao';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -29,7 +30,6 @@ export default function App() {
             options={{ title: 'Detalhes do Ponto' }}
           />
 
-          {/* Issue #21 (N2-4): a mesma tela serve para cadastrar e editar pontos. */}
           <Stack.Screen
             name="CadastroPonto"
             component={CadastroPonto}
@@ -38,7 +38,6 @@ export default function App() {
             })}
           />
 
-          {/* Issue #11: a mesma tela serve para cadastrar e editar. */}
           <Stack.Screen
             name="CadastroDoacao"
             component={CadastroDoacao}
@@ -46,18 +45,23 @@ export default function App() {
               title: route.params?.doacao ? 'Editar Doação' : 'Cadastrar Doação',
             })}
           />
-          {/* Issue #09: tela do histórico de doações */}
+
           <Stack.Screen
             name="MinhasDoacoes"
             component={MinhasDoacoes}
             options={{ title: 'Minhas Doações' }}
           />
 
-          {/* Issue #10: tela de detalhe (com exclusão e botão de editar) */}
           <Stack.Screen
             name="DetalheDoacao"
             component={DetalheDoacao}
             options={{ title: 'Detalhe da Doação' }}
+          />
+
+          <Stack.Screen
+            name="MeusPontos"
+            component={MeusPontos}
+            options={{ title: 'Meus Pontos' }}
           />
         </Stack.Navigator>
       </NavigationContainer>

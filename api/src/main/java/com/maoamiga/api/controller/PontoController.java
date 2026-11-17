@@ -27,34 +27,35 @@ public class PontoController {
         return service.listar();
     }
 
-    // GET /api/v1/pontos/{id}  -> 404 se não existir
+    // GET /api/v1/pontos/{id}  
     @GetMapping("/{id}")
     public PontoResponseDTO buscar(@PathVariable UUID id) {
         return service.buscar(id);
     }
 
-    // GET /api/v1/pontos/filtro?filtro=vila&page=0&size=10&sort=bairro,asc
+    // GET /api/v1/pontos/filtro?filtro=vila&tipo=coleta&page=0&size=10&sort=bairro,asc
     @GetMapping("/filtro")
     public Page<PontoResponseDTO> filtrar(
             @RequestParam(defaultValue = "") String filtro,
+            @RequestParam(defaultValue = "") String tipo, 
             @PageableDefault(size = 10, sort = "nome") Pageable pageable) {
-        return service.filtrar(filtro, pageable);
+        return service.filtrar(filtro, tipo, pageable);
     }
 
-    // POST /api/v1/pontos  -> 201, ou 400 se faltar campo (@Valid)
+    // POST /api/v1/pontos  
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public PontoResponseDTO cadastrar(@Valid @RequestBody PontoRequestDTO dto) {
         return service.cadastrar(dto);
     }
 
-    // PUT /api/v1/pontos/{id}  -> 404 se não existir, 400 se campo inválido
+    // PUT /api/v1/pontos/{id} 
     @PutMapping("/{id}")
     public PontoResponseDTO editar(@PathVariable UUID id, @Valid @RequestBody PontoRequestDTO dto) {
         return service.editar(id, dto);
     }
 
-    // DELETE /api/v1/pontos/{id}  -> 204
+    // DELETE /api/v1/pontos/{id} 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void excluir(@PathVariable UUID id) {

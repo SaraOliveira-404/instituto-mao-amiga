@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -14,6 +13,7 @@ import type { RootStackParamList } from '../tipos/navegacao';
 import type { Doacao } from '../tipos/doacao';
 import { buscarPorId, excluir } from '../services/doacoesService';
 import { formatarData } from '../utilitarios/formatarData';
+import { confirmar, avisar } from '../utilitarios/confirmar';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'DetalheDoacao'>;
 
@@ -66,36 +66,27 @@ export default function DetalheDoacao({ route, navigation }: Props) {
     return () => clearTimeout(timer);
   }, [mensagemSucesso]);
 
-  // Pede confirmação (Alert) antes de apagar
-  function confirmarExclusao() {
+  async function confirmarExclusao() {
     if (doacao === null) return;
 
-    Alert.alert(
+    const confirmou = await confirmar(
       'Excluir doação',
-      'Tem certeza que deseja excluir esta doação? Essa ação não pode ser desfeita.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Excluir',
-          style: 'destructive',
-          onPress: async () => {
-            // apaga na API (DELETE). Se falhar, continua na tela e avisa (não finge que deu certo)
-            try {
-              await excluir(doacao.id);
-              // Volta ao histórico enviando a mensagem de sucesso (o histórico recarrega e a doação some)
-              navigation.popTo('MinhasDoacoes', {
-                mensagem: 'Doação excluída com sucesso!',
-              });
-            } catch {
-              Alert.alert(
-                'Erro',
-                'Não foi possível excluir a doação. Verifique se a API está ligada e tente novamente.'
-              );
-            }
-          },
-        },
-      ]
+      'Tem certeza que deseja excluir esta doação? Essa ação não pode ser desfeita.'
     );
+    if (!confirmou) return;
+
+    // Apaga na API (DELETE). Se falhar, continua na tela e avisa 
+    try {
+      await excluir(doacao.id);
+      navigation.popTo('MinhasDoacoes', {
+        mensagem: 'Doação excluída com sucesso!',
+      });
+    } catch {
+      avisar(
+        'Erro',
+        'Não foi possível excluir a doação. Verifique se a API está ligada e tente novamente.'
+      );
+    }
   }
 
   if (estado === 'carregando') return <ActivityIndicator style={styles.centro} />;
@@ -144,7 +135,7 @@ export default function DetalheDoacao({ route, navigation }: Props) {
           <Text style={styles.botaoTexto}>Editar doação</Text>
         </TouchableOpacity>
 
-        {/* Botão de excluir (pede confirmação antes) */}
+        {/* Botão de excluir*/}
         <TouchableOpacity style={styles.botaoExcluir} onPress={confirmarExclusao}>
           <Text style={styles.botaoTexto}>Excluir doação</Text>
         </TouchableOpacity>

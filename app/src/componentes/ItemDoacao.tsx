@@ -1,5 +1,4 @@
 // Card de doação, usado em MinhasDoacoes(clicavel) e DetalheDoacao(não clicavel) por isso está em um aquivo separado para não precisar repetir o código
-
 import { memo } from 'react';
 import { Text, TouchableOpacity, StyleSheet } from 'react-native';
 import type { Doacao } from '../tipos/doacao';
@@ -28,7 +27,6 @@ export const ItemDoacao = memo(function ItemDoacao({ doacao, onPress }: Props) {
     >
       <Text style={styles.titulo}>{doacao.tipoItem}</Text>
 
-      {/* NOVO: quantidade agora é número, por isso o String() */}
       <Linha rotulo="Quantidade" valor={String(doacao.quantidade)} />
       <Linha rotulo="Destino" valor={doacao.pontoDestino} />
       <Linha rotulo="Registrada em" valor={formatarData(doacao.criadoEm)} />

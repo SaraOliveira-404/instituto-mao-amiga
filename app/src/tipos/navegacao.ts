@@ -1,4 +1,3 @@
-// Rotas tipadas do app
 import type { Doacao } from './doacao';
 import type { Ponto } from './ponto';
 
@@ -9,4 +8,5 @@ export type RootStackParamList = {
   CadastroDoacao: { doacao?: Doacao } | undefined;
   MinhasDoacoes: { mensagem?: string } | undefined;
   DetalheDoacao: { doacaoId: string; mensagem?: string };
+  MeusPontos: undefined; 
 };

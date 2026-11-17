@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Text,
-  TextInput,
   TouchableOpacity,
   FlatList,
   View,
@@ -14,101 +13,98 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../tipos/navegacao';
 import type { Ponto } from '../tipos/ponto';
 import { buscarPagina, consumirAlteracao } from '../services/pontosService';
+import { listarFavoritos, alternarFavorito } from '../services/favoritosService';
+import { CampoBusca } from '../componentes/CampoBusca';
+import { FiltroOpcoes } from '../componentes/FiltroOpcoes';
+import { usePaginacao } from '../utilitarios/usePaginacao'; 
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ListaPontos'>;
 
-// Item da lista: toque abre o detalhe do ponto
-function PontoItem({ ponto, onPress }: { ponto: Ponto; onPress: () => void }) {
+const opcoesTipo = [
+  { rotulo: 'Todos', valor: '' },
+  { rotulo: 'Coleta', valor: 'coleta' },
+  { rotulo: 'Distribuição', valor: 'distribuição' },
+];
+
+// Item da lista: toque no texto abre o detalhe; toque no coração favorita
+function PontoItem({
+  ponto,
+  favorito,
+  onPress,
+  onFavoritar,
+}: {
+  ponto: Ponto;
+  favorito: boolean;
+  onPress: () => void;
+  onFavoritar: () => void;
+}) {
   return (
-    <TouchableOpacity style={styles.item} onPress={onPress}>
-      <Text style={styles.itemNome}>{ponto.nome}</Text>
-      <Text style={styles.itemInfo}>
-        {ponto.bairro} · {ponto.tipo}
-      </Text>
-    </TouchableOpacity>
+    <View style={styles.item}>
+      <TouchableOpacity style={styles.itemTexto} onPress={onPress}>
+        <Text style={styles.itemNome}>{ponto.nome}</Text>
+        <Text style={styles.itemInfo}>
+          {ponto.bairro} · {ponto.tipo}
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.botaoFavorito}
+        onPress={onFavoritar}
+        accessibilityLabel={favorito ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+      >
+        <Text style={[styles.coracao, favorito && styles.coracaoAtivo]}>
+          {favorito ? '♥' : '♡'}
+        </Text>
+      </TouchableOpacity>
+    </View>
   );
 }
 
-// Botões de atalho, busca e lista de pontos
+// Menu (botões e filtro de tipo), busca e lista de pontos
 function ListaPontos({ navigation }: Props) {
-  const [pontos, setPontos] = useState<Ponto[]>([]);
-  const [paginaAtual, setPaginaAtual] = useState(0);
-  const [totalPaginas, setTotalPaginas] = useState(0);
-  const [carregando, setCarregando] = useState(false);
-  const [erro, setErro] = useState('');
+  const [favoritos, setFavoritos] = useState<string[]>([]);
 
-  //"busca" é o que a pessoa digita; "filtro" é o texto já enviado à API (depois de 400 ms parado)
+  // "busca" é o que a pessoa digita; "filtro" é o texto já enviado à API
   const [busca, setBusca] = useState('');
   const [filtro, setFiltro] = useState('');
+  const [tipoFiltro, setTipoFiltro] = useState(''); // '' = todos, 'coleta' ou 'distribuição'
 
-  const carregandoRef = useRef(false);
-  const versaoBusca = useRef(0);
-  const filtroAtual = useRef(''); // guarda o filtro atual para recarregar a lista sem perder a busca
-
-  //Carrega uma página da API (com o filtro atual); se falhar (API desligada) mostra mensagem
-  const carregarPagina = useCallback(async (numero: number, texto: string) => {
-    // Página 0 = busca nova: zera a lista e invalida qualquer resposta que ainda esteja a caminho
-    if (numero === 0) {
-      versaoBusca.current += 1;
-      setPontos([]);
-      setPaginaAtual(0);
-      setTotalPaginas(0);
-    }
-    const versao = versaoBusca.current;
-
-    carregandoRef.current = true;
-    setCarregando(true);
-    setErro('');
-    try {
-      const resposta = await buscarPagina(numero, texto);
-      if (versao !== versaoBusca.current) return;
-      setPontos((anteriores) =>
-        numero === 0 ? resposta.content : [...anteriores, ...resposta.content]
-      );
-      setPaginaAtual(resposta.page.number);
-      setTotalPaginas(resposta.page.totalPages);
-    } catch {
-      if (versao !== versaoBusca.current) return;
-      setErro('Não foi possível carregar os pontos. Verifique se a API está ligada.');
-    } finally {
-      if (versao === versaoBusca.current) {
-        carregandoRef.current = false;
-        setCarregando(false);
-      }
-    }
-  }, []);
-
-  //Roda toda vez que a tela volta a ficar visível: se algum ponto mudou, recarrega a lista
-  useFocusEffect(
-    useCallback(() => {
-      if (consumirAlteracao()) carregarPagina(0, filtroAtual.current);
-    }, [carregarPagina])
+  const {
+    itens: pontos,
+    carregando,
+    erro,
+    carregarMais,
+    recarregar,
+    tentarNovamente,
+  } = usePaginacao<Ponto>(
+    (pagina) => buscarPagina(pagina, filtro, 10, tipoFiltro),
+    'Não foi possível carregar os pontos. Verifique se a API está ligada.'
   );
 
-  //Espera a pessoa parar de digitar por 400 ms antes de buscar (evita uma chamada por letra)
+  useFocusEffect(
+    useCallback(() => {
+      if (consumirAlteracao()) recarregar();
+      listarFavoritos().then(setFavoritos);
+    }, [recarregar])
+  );
+
+  // Favorita/desfavorita 
+  async function favoritar(id: string) {
+    setFavoritos(await alternarFavorito(id));
+  }
+
+  // Espera a pessoa parar de digitar por 400 ms antes de buscar (evita uma chamada por letra)
   useEffect(() => {
     const timer = setTimeout(() => setFiltro(busca.trim()), 400);
     return () => clearTimeout(timer);
   }, [busca]);
 
-  //Sempre que o filtro muda (e na primeira abertura), volta para a primeira página
+  // Sempre que o filtro OU o tipo muda (e na primeira abertura), volta para a primeira página
   useEffect(() => {
-    filtroAtual.current = filtro;
-    carregarPagina(0, filtro);
-  }, [filtro, carregarPagina]);
+    recarregar();
+  }, [filtro, tipoFiltro, recarregar]);
 
-  //Ao chegar no fim da lista, pede a próxima página (nunca repetida e para na última)
-  function carregarMais() {
-    if (carregandoRef.current || erro !== '' || paginaAtual + 1 >= totalPaginas) return;
-    carregarPagina(paginaAtual + 1, filtro);
-  }
-
-  //Botão "Tentar novamente" do erro: repete a página que falhou
-  function tentarNovamente() {
-    carregarPagina(pontos.length === 0 ? 0 : paginaAtual + 1, filtro);
-  }
-
-  //Mensagem de erro quando a API está fora do ar
+  // Mensagem de erro quando a API está fora do ar
   const blocoErro = (
     <View style={styles.erroBox}>
       <Text style={styles.erroTexto}>{erro}</Text>
@@ -118,8 +114,8 @@ function ListaPontos({ navigation }: Props) {
     </View>
   );
 
-  return (
-    <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
+  const menu = (
+    <View>
       <TouchableOpacity
         style={styles.botaoPonto}
         onPress={() => navigation.navigate('CadastroPonto')}
@@ -134,7 +130,6 @@ function ListaPontos({ navigation }: Props) {
         <Text style={styles.botaoCadastroTexto}>+ Cadastrar Doação</Text>
       </TouchableOpacity>
 
-      {/* Tela de histórico */}
       <TouchableOpacity
         style={styles.botaoHistorico}
         onPress={() => navigation.navigate('MinhasDoacoes')}
@@ -142,26 +137,46 @@ function ListaPontos({ navigation }: Props) {
         <Text style={styles.botaoCadastroTexto}>Minhas Doações</Text>
       </TouchableOpacity>
 
-      {/* Campo de busca (filtra pela API por nome ou bairro) */}
-      <TextInput
-        style={styles.busca}
-        placeholder="Buscar ponto por nome ou bairro"
-        value={busca}
-        onChangeText={setBusca}
-        autoCorrect={false}
-      />
+      <TouchableOpacity
+        style={styles.botaoFavoritos}
+        onPress={() => navigation.navigate('MeusPontos')}
+      >
+        <Text style={styles.botaoCadastroTexto}>♥ Meus Pontos</Text>
+      </TouchableOpacity>
 
+      {/* Filtro por tipo usando o componente reutilizável */}
+      <View style={styles.espaco}>
+        <FiltroOpcoes opcoes={opcoesTipo} valor={tipoFiltro} onChange={setTipoFiltro} />
+      </View>
+
+      {/* Campo de busca reutilizável (a API filtra por nome ou bairro) */}
+      <View style={styles.espaco}>
+        <CampoBusca
+          valor={busca}
+          onChangeTexto={setBusca}
+          placeholder="Buscar ponto por nome ou bairro"
+        />
+      </View>
+    </View>
+  );
+
+  return (
+    <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
       <FlatList
         data={pontos}
+        extraData={favoritos}
         keyExtractor={(ponto) => ponto.id}
         renderItem={({ item }) => (
           <PontoItem
             ponto={item}
+            favorito={favoritos.includes(item.id)}
             onPress={() => navigation.navigate('DetalhePonto', { pontoId: item.id })}
+            onFavoritar={() => favoritar(item.id)}
           />
         )}
+        ListHeaderComponent={menu} 
         onEndReached={carregarMais}
-        onEndReachedThreshold={0.5}
+        onEndReachedThreshold={1} 
         keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
           carregando ? (
@@ -170,8 +185,8 @@ function ListaPontos({ navigation }: Props) {
             blocoErro
           ) : (
             <Text style={styles.vazio}>
-              {filtro !== ''
-                ? `Nenhum ponto encontrado para "${filtro}".`
+              {filtro !== '' || tipoFiltro !== ''
+                ? 'Nenhum ponto encontrado para este filtro.'
                 : 'Nenhum ponto cadastrado.'}
             </Text>
           )
@@ -190,24 +205,21 @@ export default ListaPontos;
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20 },
+  espaco: { marginBottom: 12 },
   item: {
-    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: 12,
     marginBottom: 8,
     backgroundColor: '#F0F0F0',
     minHeight: 44,
-    justifyContent: 'center',
   },
+  itemTexto: { flex: 1, paddingVertical: 12, justifyContent: 'center' },
   itemNome: { fontSize: 16, fontWeight: 'bold' },
   itemInfo: { fontSize: 13, color: '#666', marginTop: 2 },
-  busca: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
-    marginBottom: 12,
-  },
+  botaoFavorito: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  coracao: { fontSize: 26, color: '#666' },
+  coracaoAtivo: { color: '#c2185b' },
   botaoPonto: {
     backgroundColor: '#00796b',
     borderRadius: 8,
@@ -232,7 +244,16 @@ const styles = StyleSheet.create({
     padding: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
+    minHeight: 44,
+  },
+  botaoFavoritos: {
+    backgroundColor: '#c2185b',
+    borderRadius: 8,
+    padding: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
     minHeight: 44,
   },
   botaoTentar: {

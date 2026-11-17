@@ -47,11 +47,11 @@ export default function CadastroPonto({ route, navigation }: Props) {
         horario: pontoEditando?.horario ?? '',
         tipo: pontoEditando?.tipo ?? '',
     });
-    const [erros, setErros] = useState<Erros>({}); // erro de cada campo
-    const [erroEnvio, setErroEnvio] = useState(''); // erro vindo da API (400 ou desligada)
+    const [erros, setErros] = useState<Erros>({}); 
+    const [erroEnvio, setErroEnvio] = useState(''); 
     const [enviando, setEnviando] = useState(false);
 
-    // Atualiza um campo e limpa os erros dele (o que foi digitado nunca é apagado)
+    // Atualiza um campo e limpa os erros dele 
     function alterar(chave: keyof PontoDados, valor: string) {
         setValores((v) => ({ ...v, [chave]: valor }));
         setErros((e) => ({ ...e, [chave]: undefined }));
@@ -72,7 +72,7 @@ export default function CadastroPonto({ route, navigation }: Props) {
 
     async function salvar() {
         setErroEnvio('');
-        if (!validar()) return; // campo vazio: não envia nada
+        if (!validar()) return; 
 
         const dados: PontoDados = {
             nome: valores.nome.trim(),

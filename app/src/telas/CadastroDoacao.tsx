@@ -17,7 +17,8 @@ import type { Ponto } from '../tipos/ponto';
 import { listar as listarTodosPontos } from '../services/pontosService';
 import { cadastrar, editar } from '../services/doacoesService';
 import { ApiError } from '../services/api';
-import { tiposItem } from '../dados/TiposItem';
+import { tiposItem } from '../dados/tiposItem';
+import { CampoBusca } from '../componentes/CampoBusca';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CadastroDoacao'>;
 
@@ -32,6 +33,7 @@ export default function CadastroDoacao({ route, navigation }: Props) {
     const [quantidade, setQuantidade] = useState(doacaoEditando ? String(doacaoEditando.quantidade) : '');
     const [descricao, setDescricao] = useState(doacaoEditando?.descricao ?? '');
     const [pontoSelecionado, setPontoSelecionado] = useState<Ponto | null>(null);
+    const [textoPonto, setTextoPonto] = useState(''); // texto dentro do campo de ponto de destino
 
     // Mensagens de erro de cada campo (vazias quando está tudo certo)
     const [erroTipoItem, setErroTipoItem] = useState('');
@@ -42,11 +44,11 @@ export default function CadastroDoacao({ route, navigation }: Props) {
     // Pontos vindos da API e mensagem de erro caso ela esteja fora do ar
     const [pontos, setPontos] = useState<Ponto[]>([]);
     const [erroPontos, setErroPontos] = useState('');
-    const [carregandoPontos, setCarregandoPontos] = useState(true); //NOVO
+    const [carregandoPontos, setCarregandoPontos] = useState(true);
     const [mostrarTipos, setMostrarTipos] = useState(false);
     const [mensagemSucesso, setMensagemSucesso] = useState('');
 
-    //NOVO: erro vindo da API ao salvar (400 ou API desligada)
+    // Erro vindo da API ao salvar (400 ou API desligada)
     const [erroEnvio, setErroEnvio] = useState('');
     const [enviando, setEnviando] = useState(false);
 
@@ -81,7 +83,10 @@ export default function CadastroDoacao({ route, navigation }: Props) {
     useEffect(() => {
         if (!doacaoEditando || pontoSelecionado !== null) return;
         const achado = pontos.find((p) => p.nome === doacaoEditando.pontoDestino);
-        if (achado) setPontoSelecionado(achado);
+        if (achado) {
+            setPontoSelecionado(achado);
+            setTextoPonto(achado.nome);
+        }
     }, [pontos]);
 
     // ---------- VALIDAÇÕES (cada uma devolve true se o campo está ok) ----------
@@ -103,7 +108,6 @@ export default function CadastroDoacao({ route, navigation }: Props) {
         setMostrarTipos(false);
     }
 
-    // Quantidade: não pode ser vazia, deve ser inteiro e maior que zero
     function validarQuantidade(valor: string): boolean {
         setQuantidade(valor);
 
@@ -138,7 +142,6 @@ export default function CadastroDoacao({ route, navigation }: Props) {
         return true;
     }
 
-    // Ponto de destino: precisa ter sido escolhido na lista
     function validarPontoDestino(): boolean {
         if (pontoSelecionado === null) {
             setErroPontoDestino('Selecione um ponto de destino.');
@@ -149,13 +152,7 @@ export default function CadastroDoacao({ route, navigation }: Props) {
         return true;
     }
 
-    function selecionarPonto(ponto: Ponto) {
-        setPontoSelecionado(ponto);
-        setErroPontoDestino('');
-    }
-
-    //lista dos pontos da API em ordem alfabética
-    const pontosOrdenados = [...pontos].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    const opcoesPontos = pontos.map((p) => ({ id: p.id, titulo: p.nome, subtitulo: p.bairro }));
 
     // ---------- SALVAR ----------
     // Cadastra uma doação nova (POST) OU salva as alterações de uma existente (PUT)
@@ -200,13 +197,14 @@ export default function CadastroDoacao({ route, navigation }: Props) {
             setQuantidade('');
             setDescricao('');
             setPontoSelecionado(null);
+            setTextoPonto('');
             setMostrarTipos(false);
             setErroTipoItem('');
             setErroQuantidade('');
             setErroPontoDestino('');
             setErroDescricao('');
         } catch (e) {
-            //Em qualquer falha a tela continua aberta, com tudo o que foi digitado
+            // Em qualquer falha a tela continua aberta, com tudo o que foi digitado
             if (e instanceof ApiError && e.status === 400) {
                 setErroEnvio('A API recusou os dados enviados. Confira os campos e tente novamente.');
             } else if (e instanceof ApiError && e.status === 404) {
@@ -291,7 +289,7 @@ export default function CadastroDoacao({ route, navigation }: Props) {
                         {erroQuantidade !== '' && <Text style={styles.erro}>{erroQuantidade}</Text>}
                     </View>
 
-                    {/* ponto de destino = um TouchableOpacity por ponto da API, o escolhido fica destacado */}
+                    {/* Ponto de destino*/}
                     <View style={styles.campo}>
                         <Text style={styles.label}>Ponto de destino</Text>
 
@@ -306,37 +304,35 @@ export default function CadastroDoacao({ route, navigation }: Props) {
                             </>
                         )}
 
-                        {pontosOrdenados.length > 0 && (
-                            <ScrollView
-                                style={[styles.listaPontosRolavel, !tipoSelecionado && styles.listaDesabilitada]}
-                                nestedScrollEnabled
-                                keyboardShouldPersistTaps="handled"
-                            >
-                                {pontosOrdenados.map((ponto) => {
-                                    const escolhido = pontoSelecionado?.id === ponto.id;
-                                    return (
-                                        <TouchableOpacity
-                                            key={ponto.id}
-                                            disabled={!tipoSelecionado}
-                                            style={[styles.pontoItem, escolhido && styles.pontoItemEscolhido]}
-                                            onPress={() => selecionarPonto(ponto)}
-                                        >
-                                            <Text style={[styles.pontoNome, escolhido && styles.textoEscolhido]}>
-                                                {ponto.nome}
-                                            </Text>
-                                            <Text style={[styles.pontoEndereco, escolhido && styles.textoEscolhido]}>
-                                                {ponto.endereco}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    );
-                                })}
-                            </ScrollView>
+                        {/* Aviso quando a API respondeu, mas não existe nenhum ponto cadastrado */}
+                        {!carregandoPontos && erroPontos === '' && pontos.length === 0 && (
+                            <Text style={styles.dica}>
+                                Nenhum ponto cadastrado. Cadastre um ponto antes de registrar a doação.
+                            </Text>
+                        )}
+
+                        {pontos.length > 0 && (
+                            <CampoBusca
+                                valor={textoPonto}
+                                placeholder="Buscar ponto por nome ou bairro"
+                                opcoes={opcoesPontos}
+                                desabilitado={!tipoSelecionado}
+                                onChangeTexto={(t) => {
+                                    setTextoPonto(t);
+                                    setPontoSelecionado(null); 
+                                }}
+                                onEscolher={(o) => {
+                                    setPontoSelecionado(pontos.find((p) => p.id === o.id) ?? null);
+                                    setTextoPonto(o.titulo);
+                                    setErroPontoDestino('');
+                                }}
+                            />
                         )}
 
                         {erroPontoDestino !== '' && <Text style={styles.erro}>{erroPontoDestino}</Text>}
                     </View>
 
-                    {/* mensagem de erro da API (400 ou API desligada) */}
+                    {/* Mensagem de erro da API (400 ou API desligada) */}
                     {erroEnvio !== '' && <Text style={styles.erroEnvio}>{erroEnvio}</Text>}
 
                     <TouchableOpacity
@@ -398,24 +394,13 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         backgroundColor: '#fff',
     },
-    listaPontosRolavel: {
-        maxHeight: 260,
-        borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 8,
-        backgroundColor: '#fff',
-    },
-    listaDesabilitada: { opacity: 0.5 },
     pontoItem: {
         padding: 12,
         minHeight: 44,
         borderBottomWidth: 1,
         borderBottomColor: '#eee',
     },
-    pontoItemEscolhido: { backgroundColor: '#1B3A5C' },
     pontoNome: { fontSize: 15, fontWeight: 'bold', color: '#1B3A5C' },
-    pontoEndereco: { fontSize: 13, color: '#666', marginTop: 4 },
-    textoEscolhido: { color: '#fff' },
     botao: {
         backgroundColor: '#2e7d32',
         borderRadius: 8,

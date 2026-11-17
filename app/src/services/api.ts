@@ -1,6 +1,6 @@
-export const API_URL = 'http://localhost:8083/api/v1';
+// COLOQUE O IP DO SEU COMPUTADOR AQUI
+export const API_URL = 'http://192.168.2.8:8083/api/v1';
 
-// Erro com o status HTTP, para as telas saberem diferenciar 404 de "API fora do ar"
 export class ApiError extends Error {
   status: number;
 
@@ -11,7 +11,6 @@ export class ApiError extends Error {
   }
 }
 
-// Se a API estiver desligada, o próprio fetch lança erro (quem chamou trata).
 async function requisitar<T>(caminho: string, opcoes?: RequestInit): Promise<T> {
   const resposta = await fetch(`${API_URL}${caminho}`, opcoes);
   if (!resposta.ok) {

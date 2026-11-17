@@ -11,7 +11,10 @@ import org.springframework.data.repository.query.Param;
 public interface PontoRepository extends JpaRepository<Ponto, UUID> {
 
     @Query("SELECT p FROM Ponto p " +
-           "WHERE LOWER(p.nome) LIKE LOWER(CONCAT('%', :filtro, '%')) " +
-           "OR LOWER(p.bairro) LIKE LOWER(CONCAT('%', :filtro, '%'))")
-    Page<Ponto> buscarPorFiltro(@Param("filtro") String filtro, Pageable pageable);
+           "WHERE (LOWER(p.nome) LIKE LOWER(CONCAT('%', :filtro, '%')) " +
+           "OR LOWER(p.bairro) LIKE LOWER(CONCAT('%', :filtro, '%'))) " +
+           "AND (:tipo = '' OR p.tipo = :tipo)")
+    Page<Ponto> buscarPorFiltro(@Param("filtro") String filtro,
+                                @Param("tipo") String tipo,
+                                Pageable pageable);
 }
